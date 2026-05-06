@@ -1,0 +1,85 @@
+Graph info
+  nodes: 26353
+  edges: 77107
+  isolated nodes: 13
+  directedness: directed
+  self loops: 0
+  multi-edge keys: 0
+  schema: observed
+
+Node labels: Genre, Keyword, Movie, Person
+Edge types: ACTED_IN, DIRECTED, HAS_GENRE, HAS_KEYWORD
+Node attrs: name, entity_id
+Edge attrs: (none)
+
+
+Types
+  node labels: Genre, Keyword, Movie, Person
+  edge types: ACTED_IN, DIRECTED, HAS_GENRE, HAS_KEYWORD
+
+Attributes
+  node
+    node.name          Utf8             non-null=26353 null=0 distinct=26330 samples=Avatar | Pirates of the Caribbean: At World's End | Spectre
+    node.entity_id     Int64            non-null=26353 null=0 distinct=24152 samples=19995 | 285 | 206647
+  edge: (none)
+
+Structure
+  density: 0.0001
+  average out-degree: 2.93
+  average in-degree: 2.93
+  median degree: 2.00
+  max degree: 2297
+  connected components: 18
+  largest component share: 99.89%
+
+
+NodeFrame(rows=26353, columns=3, order=Stable)
+_id          _label  pagerank                
+------------ ------- ----------------------- 
+movie:19995  [Movie] 0.000031750000251720065 
+movie:285    [Movie] 0.000029151722013612698 
+movie:206647 [Movie] 0.00004738501966275551  
+movie:49026  [Movie] 0.000027153647966634744 
+movie:49529  [Movie] 0.00003627189027778446  
+movie:559    [Movie] 0.00002885975440640301  
+movie:38757  [Movie] 0.00006983208828584121  
+movie:99861  [Movie] 0.000030749017189518316 
+movie:767    [Movie] 0.000036460078845992215 
+movie:209112 [Movie] 0.00004653498146907134  
+movie:1452   [Movie] 0.00003621259913797925  
+movie:10764  [Movie] 0.00003944657667086119  
+movie:58     [Movie] 0.00002824111199264066  
+movie:57201  [Movie] 0.0000330679364090009   
+movie:49521  [Movie] 0.00003081326193185082  
+movie:2454   [Movie] 0.00005735103968589316  
+movie:24428  [Movie] 0.000030749017189518316 
+movie:1865   [Movie] 0.00003192581192064333  
+movie:41154  [Movie] 0.00003552677865859985  
+movie:122917 [Movie] 0.00004211946099581261  
+... 26333 rows omitted ...
+
+
+NodeFrame(rows=26353, columns=3, order=Stable)
+_id          _label  degree_centrality      
+------------ ------- ---------------------- 
+movie:19995  [Movie] 0.0009486945962355798  
+movie:285    [Movie] 0.0007210078931390407  
+movie:206647 [Movie] 0.0003794778384942319  
+movie:49026  [Movie] 0.0009486945962355798  
+movie:49529  [Movie] 0.0007210078931390407  
+movie:559    [Movie] 0.0007210078931390407  
+movie:38757  [Movie] 0.0006451123254401943  
+movie:99861  [Movie] 0.0004553734061930783  
+movie:767    [Movie] 0.00041742562234365515 
+movie:209112 [Movie] 0.0004553734061930783  
+movie:1452   [Movie] 0.0005312689738919247  
+movie:10764  [Movie] 0.00030358227079538557 
+movie:58     [Movie] 0.0006451123254401943  
+movie:57201  [Movie] 0.0006071645415907711  
+movie:49521  [Movie] 0.0004933211900425015  
+movie:2454   [Movie] 0.000569216757741348   
+movie:24428  [Movie] 0.0004933211900425015  
+movie:1865   [Movie] 0.0007210078931390407  
+movie:41154  [Movie] 0.00034153005464480874 
+movie:122917 [Movie] 0.0005312689738919247  
+... 26333 rows omitted ...

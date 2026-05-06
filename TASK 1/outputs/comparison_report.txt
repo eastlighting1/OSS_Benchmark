@@ -1,0 +1,31 @@
+# 4x4 Real Comparison Matrix
+
+Each cell is `status / total_seconds / dataframe_loc+database_loc / query_rows`. `query_rows` is the aggregate result count from 25 KG workload passes.
+
+| DataFrame \ Database | caracaldb | sqlite | postgresql | neo4j |
+| --- | ---: | ---: | ---: | ---: |
+| lynxes | ok<br>1.1499s<br>LOC 4+99<br>rows 119700 | ok<br>6.1883s<br>LOC 4+102<br>rows 119700 | ok<br>10.7871s<br>LOC 4+106<br>rows 119700 | ok<br>3.8606s<br>LOC 4+141<br>rows 119700 |
+| pandas | ok<br>1.4599s<br>LOC 39+99<br>rows 119700 | ok<br>6.5020s<br>LOC 39+102<br>rows 119700 | ok<br>10.9969s<br>LOC 39+106<br>rows 119700 | ok<br>3.2596s<br>LOC 39+141<br>rows 119700 |
+| polars | ok<br>1.2076s<br>LOC 37+99<br>rows 119700 | ok<br>6.1744s<br>LOC 37+102<br>rows 119700 | ok<br>10.6793s<br>LOC 37+106<br>rows 119700 | ok<br>2.8294s<br>LOC 37+141<br>rows 119700 |
+| dask | ok<br>1.5670s<br>LOC 36+99<br>rows 119700 | ok<br>6.5618s<br>LOC 36+102<br>rows 119700 | ok<br>10.9853s<br>LOC 36+106<br>rows 119700 | ok<br>3.2167s<br>LOC 36+141<br>rows 119700 |
+
+## Cell Details
+
+| DataFrame | Database | Status | Total Seconds | DF Seconds | DB Seconds | DF LOC | DB LOC | Movies | Query Rows | Notes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| lynxes | caracaldb | ok | 1.1499 | 0.4465 | 0.7034 | 4 | 99 | 4803 | 119700 | Loaded full KG into caracaldb and ran 25 indexed KG workload passes. |
+| polars | caracaldb | ok | 1.2076 | 0.4507 | 0.7570 | 37 | 99 | 4803 | 119700 | Loaded full KG into caracaldb and ran 25 indexed KG workload passes. |
+| pandas | caracaldb | ok | 1.4599 | 0.7550 | 0.7048 | 39 | 99 | 4803 | 119700 | Loaded full KG into caracaldb and ran 25 indexed KG workload passes. |
+| dask | caracaldb | ok | 1.5670 | 0.8022 | 0.7648 | 36 | 99 | 4803 | 119700 | Loaded full KG into caracaldb and ran 25 indexed KG workload passes. |
+| polars | neo4j | ok | 2.8294 | 0.4507 | 2.3787 | 37 | 141 | 4803 | 119700 | Loaded full KG into Neo4j and ran 25 Cypher KG workload passes. |
+| dask | neo4j | ok | 3.2167 | 0.8022 | 2.4145 | 36 | 141 | 4803 | 119700 | Loaded full KG into Neo4j and ran 25 Cypher KG workload passes. |
+| pandas | neo4j | ok | 3.2596 | 0.7550 | 2.5046 | 39 | 141 | 4803 | 119700 | Loaded full KG into Neo4j and ran 25 Cypher KG workload passes. |
+| lynxes | neo4j | ok | 3.8606 | 0.4465 | 3.4141 | 4 | 141 | 4803 | 119700 | Loaded full KG into Neo4j and ran 25 Cypher KG workload passes. |
+| polars | sqlite | ok | 6.1744 | 0.4507 | 5.7237 | 37 | 102 | 4803 | 119700 | Loaded full KG into SQLite and ran 25 SQL KG workload passes. |
+| lynxes | sqlite | ok | 6.1883 | 0.4465 | 5.7418 | 4 | 102 | 4803 | 119700 | Loaded full KG into SQLite and ran 25 SQL KG workload passes. |
+| pandas | sqlite | ok | 6.5020 | 0.7550 | 5.7470 | 39 | 102 | 4803 | 119700 | Loaded full KG into SQLite and ran 25 SQL KG workload passes. |
+| dask | sqlite | ok | 6.5618 | 0.8022 | 5.7596 | 36 | 102 | 4803 | 119700 | Loaded full KG into SQLite and ran 25 SQL KG workload passes. |
+| polars | postgresql | ok | 10.6793 | 0.4507 | 10.2287 | 37 | 106 | 4803 | 119700 | Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes. |
+| lynxes | postgresql | ok | 10.7871 | 0.4465 | 10.3406 | 4 | 106 | 4803 | 119700 | Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes. |
+| dask | postgresql | ok | 10.9853 | 0.8022 | 10.1831 | 36 | 106 | 4803 | 119700 | Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes. |
+| pandas | postgresql | ok | 10.9969 | 0.7550 | 10.2419 | 39 | 106 | 4803 | 119700 | Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes. |
