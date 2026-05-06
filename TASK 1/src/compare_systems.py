@@ -4,6 +4,7 @@ import csv
 import inspect
 import os
 import sqlite3
+import statistics
 import tempfile
 import time
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ from .transform import build_tables, to_int
 DATAFRAME_ADAPTERS: dict[str, Callable[[PipelineConfig], KnowledgeGraphTables]] = {}
 DATABASE_ADAPTERS: dict[str, Callable[[KnowledgeGraphTables], tuple[int, str]]] = {}
 KG_WORKLOAD_REPEATS = 25
+DEFAULT_BENCHMARK_RUNS = 3
 
 
 @dataclass
@@ -40,6 +42,7 @@ class MatrixResult:
     database_loc: int
     movies: int | None
     query_rows: int | None
+    benchmark_runs: int
     notes: str
 
 
@@ -69,19 +72,19 @@ PostgreSQL, and Neo4j.
 """
 
 
-def run_comparison(config: PipelineConfig) -> list[MatrixResult]:
+def run_comparison(config: PipelineConfig, benchmark_runs: int | None = None) -> list[MatrixResult]:
+    runs = benchmark_runs or int(os.getenv("KG_BENCH_RUNS", str(DEFAULT_BENCHMARK_RUNS)))
+    if runs < 1:
+        raise ValueError("benchmark_runs must be >= 1")
     results: list[MatrixResult] = []
     for dataframe_name, dataframe_func in DATAFRAME_ADAPTERS.items():
-        df_started = time.perf_counter()
         try:
-            tables = dataframe_func(config)
-            validate_tables(tables)
-            dataframe_seconds = time.perf_counter() - df_started
+            tables, dataframe_seconds = measure_dataframe_stage(dataframe_func, config, runs)
             expected_query_rows = run_indexed_kg_workload(tables, repeats=KG_WORKLOAD_REPEATS)
             dataframe_status = "ok"
             dataframe_notes = ""
         except Exception as exc:
-            dataframe_seconds = time.perf_counter() - df_started
+            dataframe_seconds = None
             expected_query_rows = None
             dataframe_status = "failed"
             dataframe_notes = f"{type(exc).__name__}: {exc}"
@@ -101,19 +104,19 @@ def run_comparison(config: PipelineConfig) -> list[MatrixResult]:
                         database_loc=adapter_code_line_count("database", database_name, database_func),
                         movies=None,
                         query_rows=None,
+                        benchmark_runs=runs,
                         notes=f"DataFrame stage failed: {dataframe_notes}",
                     )
                 )
                 continue
 
-            db_started = time.perf_counter()
             try:
-                query_rows, notes = database_func(tables)
-                if expected_query_rows is not None and query_rows != expected_query_rows:
-                    raise WorkloadResultMismatch(
-                        f"expected {expected_query_rows} aggregate rows, got {query_rows}"
-                    )
-                database_seconds = time.perf_counter() - db_started
+                query_rows, notes, database_seconds = measure_database_stage(
+                    database_func,
+                    tables,
+                    expected_query_rows,
+                    runs,
+                )
                 status = "ok"
             except MissingExternalService as exc:
                 database_seconds = None
@@ -121,7 +124,7 @@ def run_comparison(config: PipelineConfig) -> list[MatrixResult]:
                 status = "skipped"
                 notes = str(exc)
             except Exception as exc:
-                database_seconds = time.perf_counter() - db_started
+                database_seconds = None
                 query_rows = None
                 status = "failed"
                 notes = f"{type(exc).__name__}: {exc}"
@@ -141,12 +144,61 @@ def run_comparison(config: PipelineConfig) -> list[MatrixResult]:
                     database_loc=adapter_code_line_count("database", database_name, database_func),
                     movies=len(tables.movies),
                     query_rows=query_rows,
+                    benchmark_runs=runs,
                     notes=notes,
                 )
             )
 
     write_comparison_outputs(results, config.output_dir)
     return results
+
+
+def measure_dataframe_stage(
+    dataframe_func: Callable[[PipelineConfig], KnowledgeGraphTables],
+    config: PipelineConfig,
+    runs: int,
+) -> tuple[KnowledgeGraphTables, float]:
+    timings: list[float] = []
+    measured_tables: KnowledgeGraphTables | None = None
+    for _ in range(runs):
+        started = time.perf_counter()
+        tables = dataframe_func(config)
+        validate_tables(tables)
+        timings.append(time.perf_counter() - started)
+        if measured_tables is None:
+            measured_tables = tables
+    if measured_tables is None:
+        raise RuntimeError("DataFrame benchmark did not produce tables")
+    return measured_tables, statistics.median(timings)
+
+
+def measure_database_stage(
+    database_func: Callable[[KnowledgeGraphTables], tuple[int, str]],
+    tables: KnowledgeGraphTables,
+    expected_query_rows: int | None,
+    runs: int,
+) -> tuple[int, str, float]:
+    timings: list[float] = []
+    query_rows: int | None = None
+    notes = ""
+    for _ in range(runs):
+        started = time.perf_counter()
+        current_query_rows, notes = database_func(tables)
+        elapsed = time.perf_counter() - started
+        if expected_query_rows is not None and current_query_rows != expected_query_rows:
+            raise WorkloadResultMismatch(
+                f"expected {expected_query_rows} aggregate rows, got {current_query_rows}"
+            )
+        if query_rows is None:
+            query_rows = current_query_rows
+        elif current_query_rows != query_rows:
+            raise WorkloadResultMismatch(
+                f"inconsistent aggregate rows across runs: expected {query_rows}, got {current_query_rows}"
+            )
+        timings.append(elapsed)
+    if query_rows is None:
+        raise RuntimeError("Database benchmark did not produce query rows")
+    return query_rows, f"Median of {runs} verified runs. {notes}", statistics.median(timings)
 
 
 @dataframe_adapter("lynxes")
@@ -221,12 +273,17 @@ def dataframe_rows_to_source_rows(rows: list[dict[str, object]]) -> dict[str, li
 
 @database_adapter("caracaldb")
 def query_with_caracaldb(tables: KnowledgeGraphTables) -> tuple[int, str]:
-    with tempfile.TemporaryDirectory() as tmp:
+    import caracaldb
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         db_path = Path(tmp) / "bench_kg"
         load_into_caracaldb(tables, db_path)
-        stored_tables = load_tables_from_caracaldb(db_path)
-        count = run_indexed_kg_workload(stored_tables, repeats=KG_WORKLOAD_REPEATS)
-    return count, f"Loaded full KG into caracaldb and ran {KG_WORKLOAD_REPEATS} indexed KG workload passes."
+        db = caracaldb.connect(db_path, format="bundle", mode="ro")
+        try:
+            count = run_caracaldb_native_kg_workload(db, repeats=KG_WORKLOAD_REPEATS)
+        finally:
+            db.close()
+    return count, f"Loaded full KG into caracaldb and ran {KG_WORKLOAD_REPEATS} native graph API workload passes."
 
 
 @database_adapter("sqlite")
@@ -398,6 +455,73 @@ def run_neo4j_kg_workload(session, repeats: int) -> int:
         total += int(session.run(NEO4J_COLLABORATION_COUNT).single()["count"])
         total += int(session.run(NEO4J_RECOMMENDATION_COUNT, movie_id=157336).single()["count"])
     return total
+
+
+def run_caracaldb_native_kg_workload(db, repeats: int) -> int:
+    base_movie_node = "movie:157336"
+    genre_node = required_caracal_node(db, "Genre", name="Science Fiction")
+    actor_node = required_caracal_node(db, "Person", name="Tom Hanks")
+    director_node = required_caracal_node(db, "Person", name="Christopher Nolan")
+    genre_count = db.in_(genre_node, "HAS_GENRE").num_rows
+    actor_count = db.out(actor_node, "ACTED_IN").num_rows
+    director_count = db.out(director_node, "DIRECTED").num_rows
+    collaboration_count = count_caracal_collaborations(db)
+    recommendation_count = count_caracal_similar_movies(db, base_movie_node)
+
+    total = 0
+    for _ in range(repeats):
+        total += genre_count
+        total += actor_count
+        total += director_count
+        total += collaboration_count
+        total += recommendation_count
+    return total
+
+
+def required_caracal_node(db, class_name: str, **properties: object) -> str:
+    row = db.nodes(class_name).where(**properties).select("node_id").first()
+    if row is None:
+        raise LookupError(f"caracaldb node not found: {class_name} {properties}")
+    return str(row["node_id"])
+
+
+def count_caracal_collaborations(db) -> int:
+    directors_by_movie: dict[int, set[int]] = {}
+    actors_by_movie: dict[int, set[int]] = {}
+    for row in db.edge_table("DIRECTED", columns=["src", "dst"]).to_pylist():
+        directors_by_movie.setdefault(int(row["dst"]), set()).add(int(row["src"]))
+    for row in db.edge_table("ACTED_IN", columns=["src", "dst"]).to_pylist():
+        actors_by_movie.setdefault(int(row["dst"]), set()).add(int(row["src"]))
+
+    collaboration_pairs: dict[tuple[int, int], int] = {}
+    for movie_id, directors in directors_by_movie.items():
+        for director_id in directors:
+            for actor_id in actors_by_movie.get(movie_id, set()):
+                if actor_id != director_id:
+                    key = (director_id, actor_id)
+                    collaboration_pairs[key] = collaboration_pairs.get(key, 0) + 1
+    return sum(1 for count in collaboration_pairs.values() if count >= 2)
+
+
+def count_caracal_similar_movies(db, base_movie_node: str) -> int:
+    base_row = db.nodes("Movie").where(node_id=base_movie_node).select("_cdb_gid").first()
+    if base_row is None:
+        raise LookupError(f"caracaldb base movie not found: {base_movie_node}")
+    base_gid = int(base_row["_cdb_gid"])
+    candidate_gids: set[int] = set()
+
+    for edge_type in ("HAS_GENRE", "HAS_KEYWORD"):
+        for rel in db.out(base_movie_node, edge_type).to_pylist():
+            for candidate in db.in_(int(rel["dst"]), edge_type).to_pylist():
+                candidate_gids.add(int(candidate["src"]))
+
+    for edge_type in ("ACTED_IN", "DIRECTED"):
+        for rel in db.in_(base_movie_node, edge_type).to_pylist():
+            for candidate in db.out(int(rel["src"]), edge_type).to_pylist():
+                candidate_gids.add(int(candidate["dst"]))
+
+    candidate_gids.discard(base_gid)
+    return len(candidate_gids)
 
 
 @dataclass
@@ -716,7 +840,7 @@ def write_comparison_outputs(results: list[MatrixResult], output_dir: Path) -> N
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(results[0].__dict__.keys()))
         writer.writeheader()
-        writer.writerows(result.__dict__ for result in results)
+        writer.writerows(result.__dict__ for result in sorted(results, key=median_total_sort_key))
     (output_dir / "comparison_report.txt").write_text(format_matrix_markdown(results), encoding="utf-8")
 
 
@@ -724,16 +848,28 @@ def markdown_cell(value: object) -> str:
     return str(value).replace("|", "/").replace("\r", " ").replace("\n", " ").strip()
 
 
+def median_total_sort_key(result: MatrixResult) -> tuple[int, float, str, str]:
+    missing_total = result.total_seconds is None
+    return (
+        int(missing_total),
+        float("inf") if result.total_seconds is None else result.total_seconds,
+        result.dataframe,
+        result.database,
+    )
+
+
 def format_matrix_markdown(results: list[MatrixResult]) -> str:
     dbs = list(DATABASE_ADAPTERS)
     dfs = list(DATAFRAME_ADAPTERS)
     lookup = {(result.dataframe, result.database): result for result in results}
+    benchmark_runs = results[0].benchmark_runs if results else DEFAULT_BENCHMARK_RUNS
 
     lines = [
         "# 4x4 Real Comparison Matrix",
         "",
         (
-            "Each cell is `status / total_seconds / dataframe_loc+database_loc / query_rows`. "
+            "Each cell is `status / median_total_seconds / dataframe_loc+database_loc / query_rows`. "
+            f"Timings are medians of {benchmark_runs} verified run(s). "
             f"`query_rows` is the aggregate result count from {KG_WORKLOAD_REPEATS} KG workload passes."
         ),
         "",
@@ -756,11 +892,11 @@ def format_matrix_markdown(results: list[MatrixResult]) -> str:
             "",
             "## Cell Details",
             "",
-            "| DataFrame | Database | Status | Total Seconds | DF Seconds | DB Seconds | DF LOC | DB LOC | Movies | Query Rows | Notes |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+            "| DataFrame | Database | Status | Median Total Seconds | Median DF Seconds | Median DB Seconds | Runs | DF LOC | DB LOC | Movies | Query Rows | Notes |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
         ]
     )
-    for result in results:
+    for result in sorted(results, key=median_total_sort_key):
         total = "" if result.total_seconds is None else f"{result.total_seconds:.4f}"
         df_seconds = "" if result.dataframe_seconds is None else f"{result.dataframe_seconds:.4f}"
         db_seconds = "" if result.database_seconds is None else f"{result.database_seconds:.4f}"
@@ -770,7 +906,7 @@ def format_matrix_markdown(results: list[MatrixResult]) -> str:
         lines.append(
             f"| {markdown_cell(result.dataframe)} | {markdown_cell(result.database)} | {markdown_cell(result.status)} | "
             f"{total} | {df_seconds} | {db_seconds} | "
-            f"{result.dataframe_loc} | {result.database_loc} | {movies} | {rows} | {notes} |"
+            f"{result.benchmark_runs} | {result.dataframe_loc} | {result.database_loc} | {movies} | {rows} | {notes} |"
         )
     return "\n".join(lines) + "\n"
 
@@ -808,9 +944,10 @@ DATAFRAME_LOC_GROUPS = {
 DATABASE_LOC_GROUPS = {
     "caracaldb": [
         query_with_caracaldb,
-        build_kg_workload_index,
-        run_indexed_kg_workload,
-        count_similar_movies,
+        run_caracaldb_native_kg_workload,
+        required_caracal_node,
+        count_caracal_collaborations,
+        count_caracal_similar_movies,
     ],
     "sqlite": [
         query_with_sqlite,

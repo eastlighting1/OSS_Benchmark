@@ -1,17 +1,17 @@
-dataframe,database,status,total_seconds,dataframe_seconds,database_seconds,dataframe_loc,database_loc,movies,query_rows,notes
-lynxes,caracaldb,ok,1.1499205000291113,0.44652210001368076,0.7033984000154305,4,99,4803,119700,Loaded full KG into caracaldb and ran 25 indexed KG workload passes.
-lynxes,sqlite,ok,6.188292200007709,0.44652210001368076,5.741770099994028,4,102,4803,119700,Loaded full KG into SQLite and ran 25 SQL KG workload passes.
-lynxes,postgresql,ok,10.787086299998919,0.44652210001368076,10.340564199985238,4,106,4803,119700,Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
-lynxes,neo4j,ok,3.860609800001839,0.44652210001368076,3.4140876999881584,4,141,4803,119700,Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
-pandas,caracaldb,ok,1.4598539000144228,0.7550058999913745,0.7048480000230484,39,99,4803,119700,Loaded full KG into caracaldb and ran 25 indexed KG workload passes.
-pandas,sqlite,ok,6.501980700006243,0.7550058999913745,5.746974800014868,39,102,4803,119700,Loaded full KG into SQLite and ran 25 SQL KG workload passes.
-pandas,postgresql,ok,10.996911899972474,0.7550058999913745,10.2419059999811,39,106,4803,119700,Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
-pandas,neo4j,ok,3.2596091000013985,0.7550058999913745,2.504603200010024,39,141,4803,119700,Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
-polars,caracaldb,ok,1.2076493999629747,0.45068759997957386,0.7569617999834009,37,99,4803,119700,Loaded full KG into caracaldb and ran 25 indexed KG workload passes.
-polars,sqlite,ok,6.1744148999860045,0.45068759997957386,5.723727300006431,37,102,4803,119700,Loaded full KG into SQLite and ran 25 SQL KG workload passes.
-polars,postgresql,ok,10.679349699959857,0.45068759997957386,10.228662099980284,37,106,4803,119700,Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
-polars,neo4j,ok,2.829351599997608,0.45068759997957386,2.378664000018034,37,141,4803,119700,Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
-dask,caracaldb,ok,1.5669835999724455,0.8022055999899749,0.7647779999824706,36,99,4803,119700,Loaded full KG into caracaldb and ran 25 indexed KG workload passes.
-dask,sqlite,ok,6.561816600005841,0.8022055999899749,5.759611000015866,36,102,4803,119700,Loaded full KG into SQLite and ran 25 SQL KG workload passes.
-dask,postgresql,ok,10.98528609998175,0.8022055999899749,10.183080499991775,36,106,4803,119700,Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
-dask,neo4j,ok,3.2166586999956053,0.8022055999899749,2.4144531000056304,36,141,4803,119700,Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
+dataframe,database,status,total_seconds,dataframe_seconds,database_seconds,dataframe_loc,database_loc,movies,query_rows,benchmark_runs,notes
+lynxes,caracaldb,ok,1.7717767999856733,0.43392640000092797,1.3378503999847453,4,66,4803,119700,3,Median of 3 verified runs. Loaded full KG into caracaldb and ran 25 native graph API workload passes.
+polars,caracaldb,ok,1.8848867999913637,0.521162799996091,1.3637239999952726,37,66,4803,119700,3,Median of 3 verified runs. Loaded full KG into caracaldb and ran 25 native graph API workload passes.
+pandas,caracaldb,ok,2.0895952999708243,0.7297407999867573,1.359854499984067,39,66,4803,119700,3,Median of 3 verified runs. Loaded full KG into caracaldb and ran 25 native graph API workload passes.
+dask,caracaldb,ok,2.219614300003741,0.8409652000118513,1.3786490999918897,36,66,4803,119700,3,Median of 3 verified runs. Loaded full KG into caracaldb and ran 25 native graph API workload passes.
+lynxes,neo4j,ok,2.777446599997347,0.43392640000092797,2.3435201999964193,4,141,4803,119700,3,Median of 3 verified runs. Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
+pandas,neo4j,ok,5.2103654999809805,0.7297407999867573,4.480624699994223,39,141,4803,119700,3,Median of 3 verified runs. Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
+polars,neo4j,ok,5.229525000002468,0.521162799996091,4.708362200006377,37,141,4803,119700,3,Median of 3 verified runs. Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
+dask,neo4j,ok,5.820247900002869,0.8409652000118513,4.979282699991018,36,141,4803,119700,3,Median of 3 verified runs. Loaded full KG into Neo4j and ran 25 Cypher KG workload passes.
+lynxes,sqlite,ok,6.196741699997801,0.43392640000092797,5.762815299996873,4,102,4803,119700,3,Median of 3 verified runs. Loaded full KG into SQLite and ran 25 SQL KG workload passes.
+polars,sqlite,ok,6.281500899989624,0.521162799996091,5.7603380999935325,37,102,4803,119700,3,Median of 3 verified runs. Loaded full KG into SQLite and ran 25 SQL KG workload passes.
+pandas,sqlite,ok,6.487637899990659,0.7297407999867573,5.757897100003902,39,102,4803,119700,3,Median of 3 verified runs. Loaded full KG into SQLite and ran 25 SQL KG workload passes.
+dask,sqlite,ok,6.564721000002464,0.8409652000118513,5.723755799990613,36,102,4803,119700,3,Median of 3 verified runs. Loaded full KG into SQLite and ran 25 SQL KG workload passes.
+lynxes,postgresql,ok,10.506177999981446,0.43392640000092797,10.072251599980518,4,106,4803,119700,3,Median of 3 verified runs. Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
+polars,postgresql,ok,10.692534700006945,0.521162799996091,10.171371900010854,37,106,4803,119700,3,Median of 3 verified runs. Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
+pandas,postgresql,ok,10.87712229997851,0.7297407999867573,10.147381499991752,39,106,4803,119700,3,Median of 3 verified runs. Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.
+dask,postgresql,ok,10.95514400000684,0.8409652000118513,10.114178799994988,36,106,4803,119700,3,Median of 3 verified runs. Loaded full KG into PostgreSQL and ran 25 SQL KG workload passes.

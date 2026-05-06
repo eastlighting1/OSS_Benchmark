@@ -34,7 +34,7 @@ def build_pipeline(config: PipelineConfig) -> KnowledgeGraphTables:
     (config.output_dir / "lynxes_graph_summary.txt").write_text(lynxes_summary, encoding="utf-8")
 
     write_reports(tables, config.output_dir)
-    run_comparison(config)
+    run_comparison(config, benchmark_runs=1)
     return tables
 
 

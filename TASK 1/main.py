@@ -41,6 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-count", type=int, default=2)
     parser.add_argument("--limit", type=int, default=10)
     parser.add_argument("--top-cast", type=int, default=5)
+    parser.add_argument("--benchmark-runs", type=int, default=3)
     return parser.parse_args()
 
 
@@ -113,7 +114,7 @@ def main() -> None:
         return
 
     if args.command == "compare":
-        rows = [result.__dict__ for result in run_comparison(config)]
+        rows = [result.__dict__ for result in run_comparison(config, benchmark_runs=args.benchmark_runs)]
         print_table(rows, limit=len(rows))
 
 

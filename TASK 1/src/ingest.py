@@ -4,7 +4,6 @@ import csv
 from pathlib import Path
 
 import lynxes
-import pyarrow.csv as pyarrow_csv
 
 
 MOVIE_COLUMNS = (
@@ -39,8 +38,9 @@ def load_csv_rows(
             label=label,
             id_col=id_col,
             id_prefix=None if id_col else label.lower(),
+            columns=projection,
+            schema_overrides=schema_overrides_for(projection),
             engine="pyarrow",
-            convert_options=pyarrow_csv.ConvertOptions(include_columns=projection),
         )
     except Exception as exc:
         raise ValueError(f"CSV schema mismatch or unreadable CSV in {path}: {exc}") from exc
@@ -92,6 +92,10 @@ def rows_to_lynxes_frame(rows: list[dict[str, str]], label: str):
 
 def lynxes_frame_to_rows(frame) -> list[dict[str, object]]:
     """Convert a lynxes NodeFrame back to dictionaries after validation/loading."""
+    if hasattr(frame, "to_rows"):
+        return strip_lynxes_reserved_columns(frame.to_rows())
+    if hasattr(frame, "to_pylist"):
+        return strip_lynxes_reserved_columns(frame.to_pylist())
     columns = [column for column in frame.column_names() if not column.startswith("_")]
     values = {column: frame.column_values(column) for column in columns}
     row_count = frame.len()
@@ -99,3 +103,17 @@ def lynxes_frame_to_rows(frame) -> list[dict[str, object]]:
         {column: (values[column][index] if values[column][index] is not None else "") for column in columns}
         for index in range(row_count)
     ]
+
+
+def strip_lynxes_reserved_columns(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        {column: (value if value is not None else "") for column, value in row.items() if not column.startswith("_")}
+        for row in rows
+    ]
+
+
+def schema_overrides_for(columns: list[str]) -> dict[str, object]:
+    overrides: dict[str, object] = {}
+    if "release_date" in columns:
+        overrides["release_date"] = lynxes.String
+    return overrides

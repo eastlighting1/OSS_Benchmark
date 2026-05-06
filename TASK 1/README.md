@@ -54,6 +54,7 @@ DataFrame/ETL: lynxes, pandas, Polars, Dask
 Database/query: caracaldb, SQLite, PostgreSQL, Neo4j
 Status: 16 ok / 16 total
 Rows checked per cell: 119700 aggregate KG workload rows
+Timing policy: median of 3 verified runs
 ```
 
 The benchmark runner validates correctness before treating a cell as `ok`.
@@ -68,34 +69,35 @@ Latest local benchmark result:
 
 | DataFrame \ Database | caracaldb | SQLite | PostgreSQL | Neo4j |
 | --- | ---: | ---: | ---: | ---: |
-| lynxes | 1.1499s | 6.1883s | 10.7871s | 3.8606s |
-| pandas | 1.4599s | 6.5020s | 10.9969s | 3.2596s |
-| Polars | 1.2076s | 6.1744s | 10.6793s | 2.8294s |
-| Dask | 1.5670s | 6.5618s | 10.9853s | 3.2167s |
+| lynxes | 1.7718s | 6.1967s | 10.5062s | 2.7774s |
+| pandas | 2.0896s | 6.4876s | 10.8771s | 5.2104s |
+| Polars | 1.8849s | 6.2815s | 10.6925s | 5.2295s |
+| Dask | 2.2196s | 6.5647s | 10.9551s | 5.8202s |
 
 The proposed `lynxes + caracaldb` stack is the fastest full combination in the
 latest run:
 
 ```text
-lynxes + caracaldb: 1.1499s total
-Polars + caracaldb: 1.2076s total
-pandas + caracaldb: 1.4599s total
-Dask + caracaldb:   1.5670s total
+lynxes + caracaldb: 1.7718s total
+Polars + caracaldb: 1.8849s total
+pandas + caracaldb: 2.0896s total
+Dask + caracaldb:   2.2196s total
 ```
 
 Key observations:
 
 - `caracaldb` is the fastest database/query backend for this local toy KG
-  workload. Its full-load plus indexed workload path completes in about 0.7s
-  after the DataFrame stage.
+  workload when compared with the same `lynxes` DataFrame stage. Its full-load
+  plus native graph API workload path completes in about 1.34s after the
+  DataFrame stage.
 - `lynxes` is the fastest DataFrame/ETL path in this run. The final ingestion
-  path uses `lynxes.read_csv` with PyArrow engine and column projection to avoid
-  materializing unused TMDB columns.
+  path uses `lynxes.read_csv(columns=...)` and `NodeFrame.to_rows()` to keep CSV
+  projection and row materialization inside the library API.
 - Polars is a close DataFrame baseline, but it does not beat the required
   `lynxes + caracaldb` combination end to end in the latest 4x4 result.
 - Neo4j is graph-native and expressive, and it beats the SQL backends in this
   run, but its external-service setup and load/query cycle are still heavier
-  than `caracaldb` for the winning end-to-end combination.
+  than `caracaldb` when paired with the winning `lynxes` ETL path.
 - SQLite is easy to run but slower for the repeated KG-style workload.
 - PostgreSQL is robust, but in this benchmark it has the highest total time
   because the test uses temporary table loading plus repeated SQL queries.
@@ -111,7 +113,7 @@ The detailed generated files are:
 Run the local benchmark without external services:
 
 ```bash
-uv run python main.py compare
+uv run python main.py compare --benchmark-runs 3
 ```
 
 To include PostgreSQL and Neo4j in the 4x4 matrix, start both services and set:
@@ -121,7 +123,7 @@ $env:POSTGRES_DSN="postgresql://kg:kgpass@localhost:5432/kgbench"
 $env:NEO4J_URI="bolt://localhost:7687"
 $env:NEO4J_USER="neo4j"
 $env:NEO4J_PASSWORD="kgpass123"
-uv run python main.py compare
+uv run python main.py compare --benchmark-runs 3
 ```
 
 The latest full run used all four database backends and all four DataFrame/ETL
@@ -182,17 +184,19 @@ The pipeline:
 
 ## Ingestion Decision
 
-The final ingestion path uses the released `lynxes.read_csv` API with column
-projection:
+The final ingestion path uses released `lynxes` APIs for column projection and
+row materialization:
 
 ```text
-lynxes.read_csv(..., engine="pyarrow", convert_options=ConvertOptions(include_columns=required_columns))
+lynxes.read_csv(..., columns=required_columns, schema_overrides=...)
+NodeFrame.to_rows()
 ```
 
 This keeps CSV ingestion inside `lynxes`, avoids the old project-local CSV
 shim, and prevents unused TMDB columns from being materialized into Python row
-dictionaries. The `caracaldb` load path uses the released Arrow bulk insert
-APIs: `insert_node_table_arrow` and `insert_edge_table_arrow`.
+dictionaries. The `caracaldb` path uses released Arrow bulk insert and graph
+query APIs: `insert_node_table_arrow`, `insert_edge_table_arrow`, `nodes`,
+`in_`, `out`, `node_table`, and `edge_table`.
 
 ## CLI Commands
 

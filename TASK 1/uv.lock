@@ -18,7 +18,7 @@ wheels = [
 
 [[package]]
 name = "caracaldb"
-version = "0.2.5"
+version = "0.2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flatbuffers" },
@@ -32,9 +32,9 @@ dependencies = [
     { name = "typer" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/c0/960173eef6f2da05d8be8760fcaf58c35207d5dcdd1a91a63dc985abf5e7/caracaldb-0.2.5.tar.gz", hash = "sha256:66e90cd1f0f7f414f2cc3a777e4725ae0b80d2595b9dba689c5944aa25f062d3", size = 265519, upload-time = "2026-05-06T10:32:27.997Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/3e/d2fef44278aae8215d713d3d488a10bccce8e04e40ebd533cb1544bf283d/caracaldb-0.2.6.tar.gz", hash = "sha256:388f6facaa971d77281365fc9323fc724a9e4d477c9bb77bb7e6d2ebf736b32f", size = 269840, upload-time = "2026-05-06T14:51:46.906Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/86/47/ef1f1d6ee83b95161bfd1161b0e6c5d8e0ff76df50929bbb6e4e54baca42/caracaldb-0.2.5-py3-none-any.whl", hash = "sha256:eaabd093e3b359729992a8f2784ef373d72ec94950f02606ba1b603db2e6edbc", size = 188561, upload-time = "2026-05-06T10:32:26.224Z" },
+    { url = "https://files.pythonhosted.org/packages/37/e2/4456c63f12ce587ad2c0c498021e5ed9de8273c6c9fe4b6c8867c65435a5/caracaldb-0.2.6-py3-none-any.whl", hash = "sha256:92dc05497c807de6d2bfd985b0eb4da37cbd505e5b3866285c46b9cf96362817", size = 191534, upload-time = "2026-05-06T14:51:45.441Z" },
 ]
 
 [[package]]
@@ -149,9 +149,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "caracaldb", specifier = ">=0.2.5" },
+    { name = "caracaldb", specifier = ">=0.2.6" },
     { name = "dask", extras = ["dataframe"], specifier = ">=2025.12.0" },
-    { name = "lynxes", specifier = ">=1.3.9" },
+    { name = "lynxes", specifier = ">=1.3.10" },
     { name = "neo4j", specifier = ">=6.0.0" },
     { name = "pandas", specifier = ">=2.3.0" },
     { name = "polars", specifier = ">=1.36.0" },
@@ -182,14 +182,14 @@ wheels = [
 
 [[package]]
 name = "lynxes"
-version = "1.3.9"
+version = "1.3.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b7/b8/c43419087c8b9ba0539a3d297d310b4cf20a6c5ec3a5836a26a54e25a9d2/lynxes-1.3.9.tar.gz", hash = "sha256:ffc744d55bf9350044e2b17269c2183791adc8b8b7b1e1b55c93e45ada066929", size = 245890, upload-time = "2026-05-06T10:26:15.925Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/e3/b3696d6c0eca045c5d0c8869e09a5ee697aab0970020fdb93551ffdafa25/lynxes-1.3.10.tar.gz", hash = "sha256:cb2c162075c9e376c41022ae23ae7c2bbf811e9540baeef391b013e57aaa7307", size = 248113, upload-time = "2026-05-06T14:21:15.918Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/03/342e82fba6c1ea7ccbdebedcabbd18bb1d5e9e26a93274cb294d6d3226b7/lynxes-1.3.9-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:24a9eb28b20d5122b714e4ae2c50db63a98dd13ed7d547ebf4a90169892ed9da", size = 5775802, upload-time = "2026-05-06T10:26:08.488Z" },
-    { url = "https://files.pythonhosted.org/packages/2b/31/7cfcdee3f7b6d04f1cd49c4674cb38658747565b964ae1500556e8423a23/lynxes-1.3.9-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:e5b0834e3c411746fb452ea79b54e2c6239489f74ca6aa3ccfc5129e090ce7bc", size = 6442463, upload-time = "2026-05-06T10:26:10.657Z" },
-    { url = "https://files.pythonhosted.org/packages/57/d5/39597689415f6a50350b693786ab64fef290b6494b38118caee07d17b696/lynxes-1.3.9-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:a2d8cd1598fc5f133c0b39ecc1ea0b1b35571600f269128a931a79ed6bb5e483", size = 6698473, upload-time = "2026-05-06T10:26:12.359Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/a7/2cb9dbd5728b4fbc9f8593b44c2e706be77316bfdeaf0e7a41e105dfc535/lynxes-1.3.9-cp310-abi3-win_amd64.whl", hash = "sha256:52ae99c65e8f51ba884cfa5eb60e1070b0b4fb3fe269dd4070a4dfa2d61330a0", size = 5848308, upload-time = "2026-05-06T10:26:14.386Z" },
+    { url = "https://files.pythonhosted.org/packages/94/53/f442678cf3ad31cb0da4e014471369a55db02883bff78cec2e1c4cd3095f/lynxes-1.3.10-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:2232c60fe5960be66751926de916944c04cc42663ab764f5effc7f23e73346f5", size = 5786389, upload-time = "2026-05-06T14:21:08.996Z" },
+    { url = "https://files.pythonhosted.org/packages/14/f9/6506c8f91d374734d53197ac49aa14011a21508b95fff4a9fc531a4caffb/lynxes-1.3.10-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:d1ec8bfd9d2345765f51d330715f1dc8983854f5965f989bbff4c64bdfaa98e0", size = 6451420, upload-time = "2026-05-06T14:21:11.077Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/8e/10a3e7f2565636f311fbcd8a87b222ddd2a0bf239efdd240e32caad3bdd5/lynxes-1.3.10-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:32222ef1b637fa394305390f7ae222167ae8116317af45dc3913048fa1c3a2b8", size = 6707391, upload-time = "2026-05-06T14:21:12.584Z" },
+    { url = "https://files.pythonhosted.org/packages/37/f1/a1672a3cfb282e95e60b9ca50cf947b2c37fd8388094fa57bf7233c69664/lynxes-1.3.10-cp310-abi3-win_amd64.whl", hash = "sha256:2e8a528b9fd7e175536ae25d55af55bc98dfc26228652a19b99e3811a6be92e5", size = 5856100, upload-time = "2026-05-06T14:21:14.242Z" },
 ]
 
 [[package]]

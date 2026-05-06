@@ -4,7 +4,6 @@ from collections import defaultdict
 from pathlib import Path
 
 import caracaldb
-from caracaldb.api import open_edge_store
 
 from .models import KnowledgeGraphTables, Table
 
@@ -32,17 +31,11 @@ def load_tables_from_caracaldb(db_path: Path) -> KnowledgeGraphTables:
 
 
 def read_node_store(db, class_name: str) -> Table:
-    return db.open_node_store(class_name).to_table().to_pylist()
+    return db.node_table(class_name).to_pylist()
 
 
 def read_edge_store(db, edge_type: str) -> Table:
-    store = open_edge_store(
-        db._bundle,
-        property_iri=f"caracaldb:local:{edge_type}",
-        local_name=edge_type,
-        create=False,
-    )
-    return store.to_table().to_pylist()
+    return db.edge_table(edge_type).to_pylist()
 
 
 def strip_caracal_columns(rows: Table) -> Table:
