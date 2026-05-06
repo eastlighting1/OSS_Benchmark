@@ -5,17 +5,17 @@ Knowledge graph-based movie exploration system for the TMDB 5000 dataset.
 ## Task Requirements
 
 The task was to implement a toy knowledge graph system for movie data using
-the required libraries `lynxes` and `caracaldb`.
+the required libraries `Lynxes` and `CaracalDB`.
 
 The system must:
 
 - Load `tmdb_5000_movies.csv` and `tmdb_5000_credits.csv`.
-- Use `lynxes` in the DataFrame/ETL layer.
+- Use `Lynxes` in the DataFrame/ETL layer.
 - Clean and merge movie and credit data by movie ID.
 - Parse JSON-like columns for genres, keywords, cast, and crew.
 - Extract `Movie`, `Person`, `Genre`, and `Keyword` entities.
 - Extract `ACTED_IN`, `DIRECTED`, `HAS_GENRE`, and `HAS_KEYWORD` relationships.
-- Store the graph-shaped tables in `caracaldb`.
+- Store the graph-shaped tables in `CaracalDB`.
 - Provide CLI queries for movie lookup, actor/director lookup, genre search, repeated director-actor collaboration analysis, central-person analysis, and similar movie recommendation.
 - Export processed tables, reports, and basic test coverage.
 - Produce a real 4x4 benchmark comparing DataFrame/ETL choices and
@@ -34,8 +34,8 @@ Each runnable cell repeats the following KG tasks 25 times:
 
 The proposed library combination is:
 
-- DataFrame/ETL: `lynxes`
-- Storage/query: `caracaldb`
+- DataFrame/ETL: `Lynxes`
+- Storage/query: `CaracalDB`
 
 This combination satisfies the required stack and is the primary implementation
 used by the project pipeline.
@@ -44,14 +44,14 @@ The comparison matrix evaluates the proposed stack against common alternatives:
 
 | Dimension | Proposed | Comparison libraries |
 | --- | --- | --- |
-| DataFrame/ETL | `lynxes` | pandas, Polars, Dask DataFrame |
-| Database/query | `caracaldb` | SQLite, PostgreSQL, Neo4j |
+| DataFrame/ETL | `Lynxes` | pandas, Polars, Dask DataFrame |
+| Database/query | `CaracalDB` | SQLite, PostgreSQL, Neo4j |
 
 The latest benchmark includes all 16 combinations:
 
 ```text
-DataFrame/ETL: lynxes, pandas, Polars, Dask
-Database/query: caracaldb, SQLite, PostgreSQL, Neo4j
+DataFrame/ETL: Lynxes, pandas, Polars, Dask
+Database/query: CaracalDB, SQLite, PostgreSQL, Neo4j
 Status: 16 ok / 16 total
 Rows checked per cell: 119700 aggregate KG workload rows
 Timing policy: median of 3 verified runs
@@ -67,37 +67,37 @@ a weaker query or returns a different result count, that cell is marked
 
 Latest local benchmark result:
 
-| DataFrame \ Database | caracaldb | SQLite | PostgreSQL | Neo4j |
+| DataFrame \ Database | CaracalDB | SQLite | PostgreSQL | Neo4j |
 | --- | ---: | ---: | ---: | ---: |
-| lynxes | 1.7718s | 6.1967s | 10.5062s | 2.7774s |
+| Lynxes | 1.7718s | 6.1967s | 10.5062s | 2.7774s |
 | pandas | 2.0896s | 6.4876s | 10.8771s | 5.2104s |
 | Polars | 1.8849s | 6.2815s | 10.6925s | 5.2295s |
 | Dask | 2.2196s | 6.5647s | 10.9551s | 5.8202s |
 
-The proposed `lynxes + caracaldb` stack is the fastest full combination in the
+The proposed `Lynxes + CaracalDB` stack is the fastest full combination in the
 latest run:
 
 ```text
-lynxes + caracaldb: 1.7718s total
-Polars + caracaldb: 1.8849s total
-pandas + caracaldb: 2.0896s total
-Dask + caracaldb:   2.2196s total
+Lynxes + CaracalDB: 1.7718s total
+Polars + CaracalDB: 1.8849s total
+pandas + CaracalDB: 2.0896s total
+Dask + CaracalDB:   2.2196s total
 ```
 
 Key observations:
 
-- `caracaldb` is the fastest database/query backend for this local toy KG
-  workload when compared with the same `lynxes` DataFrame stage. Its full-load
+- `CaracalDB` is the fastest database/query backend for this local toy KG
+  workload when compared with the same `Lynxes` DataFrame stage. Its full-load
   plus native graph API workload path completes in about 1.34s after the
   DataFrame stage.
-- `lynxes` is the fastest DataFrame/ETL path in this run. The final ingestion
-  path uses `lynxes.read_csv(columns=...)` and `NodeFrame.to_rows()` to keep CSV
+- `Lynxes` is the fastest DataFrame/ETL path in this run. The final ingestion
+  path uses `Lynxes.read_csv(columns=...)` and `NodeFrame.to_rows()` to keep CSV
   projection and row materialization inside the library API.
 - Polars is a close DataFrame baseline, but it does not beat the required
-  `lynxes + caracaldb` combination end to end in the latest 4x4 result.
+  `Lynxes + CaracalDB` combination end to end in the latest 4x4 result.
 - Neo4j is graph-native and expressive, and it beats the SQL backends in this
   run, but its external-service setup and load/query cycle are still heavier
-  than `caracaldb` when paired with the winning `lynxes` ETL path.
+  than `CaracalDB` when paired with the winning `Lynxes` ETL path.
 - SQLite is easy to run but slower for the repeated KG-style workload.
 - PostgreSQL is robust, but in this benchmark it has the highest total time
   because the test uses temporary table loading plus repeated SQL queries.
@@ -135,7 +135,7 @@ different workloads.
 
 ```text
 TASK 1/
-  data/processed/          Generated normalized CSV tables and caracaldb bundle
+  data/processed/          Generated normalized CSV tables and CaracalDB bundle
   outputs/                 Generated reports and graph artifacts
   src/                     ETL, schema, DB loading, query, recommender modules
   tests/                   Unit tests for transforms, schema, queries
@@ -178,23 +178,23 @@ The pipeline:
 3. Parses genres, keywords, cast, and crew JSON-like columns.
 4. Extracts `Movie`, `Person`, `Genre`, and `Keyword` entities.
 5. Extracts `ACTED_IN`, `DIRECTED`, `HAS_GENRE`, and `HAS_KEYWORD` relationships.
-6. Stores the graph-shaped data in `caracaldb`.
-7. Builds a `lynxes` graph frame and writes graph summary output.
+6. Stores the graph-shaped data in `CaracalDB`.
+7. Builds a `Lynxes` graph frame and writes graph summary output.
 8. Generates CSV reports.
 
 ## Ingestion Decision
 
-The final ingestion path uses released `lynxes` APIs for column projection and
+The final ingestion path uses released `Lynxes` APIs for column projection and
 row materialization:
 
 ```text
-lynxes.read_csv(..., columns=required_columns, schema_overrides=...)
+Lynxes.read_csv(..., columns=required_columns, schema_overrides=...)
 NodeFrame.to_rows()
 ```
 
-This keeps CSV ingestion inside `lynxes`, avoids the old project-local CSV
+This keeps CSV ingestion inside `Lynxes`, avoids the old project-local CSV
 shim, and prevents unused TMDB columns from being materialized into Python row
-dictionaries. The `caracaldb` path uses released Arrow bulk insert and graph
+dictionaries. The `CaracalDB` path uses released Arrow bulk insert and graph
 query APIs: `insert_node_table_arrow`, `insert_edge_table_arrow`, `nodes`,
 `in_`, `out`, `node_table`, and `edge_table`.
 
@@ -212,7 +212,7 @@ uv run python main.py recommend --movie "Interstellar" --limit 10
 uv run python main.py compare
 ```
 
-The query commands read back from the generated `caracaldb` bundle rather than
+The query commands read back from the generated `CaracalDB` bundle rather than
 from the processed CSV files. The processed CSV files are kept as inspectable
 reports of the normalized tables.
 
@@ -237,7 +237,7 @@ outputs/central_people_report.csv
 outputs/comparison_report.txt
 outputs/comparison_benchmark.csv
 outputs/README.md
-outputs/lynxes_graph_summary.txt
+outputs/Lynxes_graph_summary.txt
 outputs/tmdb_kg.gf
 ```
 
@@ -248,8 +248,8 @@ repository.
 `compare` runs a real 4x4 comparison matrix. Each DataFrame/ETL implementation
 is crossed with each database/query implementation:
 
-- DataFrame/ETL: `lynxes`, pandas, Polars, Dask DataFrame
-- Database/query: `caracaldb`, SQLite, PostgreSQL, Neo4j
+- DataFrame/ETL: `Lynxes`, pandas, Polars, Dask DataFrame
+- Database/query: `CaracalDB`, SQLite, PostgreSQL, Neo4j
 
 PostgreSQL runs when `POSTGRES_DSN` is configured. Neo4j runs when `NEO4J_URI`,
 `NEO4J_USER`, and `NEO4J_PASSWORD` are configured. Without those services, their
@@ -286,4 +286,4 @@ Current verification result:
 
 ## Notes
 
-The pipeline rebuilds the local `caracaldb` bundle on each full run. This keeps repeated executions reproducible and prevents accidental duplicate storage.
+The pipeline rebuilds the local `CaracalDB` bundle on each full run. This keeps repeated executions reproducible and prevents accidental duplicate storage.
