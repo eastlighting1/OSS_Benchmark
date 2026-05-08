@@ -1,1 +1,1 @@
-Place the TMDB data here.
+Place the TMDB / MultiHopRAG data here.

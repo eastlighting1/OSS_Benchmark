@@ -1,0 +1,23 @@
+[project]
+name = "graphrag-caracal-benchmark"
+version = "0.1.0"
+description = "Graph ecosystem benchmark for CaracalDB GraphRAG configurations"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "caracalDB @ file:///C:/Users/eastl/LightGraphDB",
+    "chromadb>=1.5.9",
+    "neo4j>=6.0.0",
+    "numpy>=2.3.0",
+    "pandas>=2.2.0",
+    "tabulate>=0.9.0",
+    "pyarrow>=22.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

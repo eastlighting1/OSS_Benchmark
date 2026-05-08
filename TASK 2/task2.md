@@ -485,6 +485,20 @@ evidence_paths
 scores
 ```
 
+The retriever must include the following GraphRAG-specific stages:
+
+```text
+query_entity_linking: link query spans to graph Entity nodes using lexical and embedding signals
+question_type_strategy: choose retrieval budgets and path strategy from inference/comparison/temporal/null types
+multi_hop_evidence_path_planning: expand from semantic Chunk hits and linked Entity seeds into evidence Chunk paths
+answer_aware_reranking: rerank context using question overlap, linked entities, predicted answer hints, and path score
+evidence_grounded_answer_span_extraction: extract final answer candidates only from retrieved evidence chunks
+citation_reranking: choose citation chunks from reranked evidence, with optional source diversity
+answer_correctness_evaluation: compare predicted answer against dataset gold answer using EM, contains, and token F1
+```
+
+These stages are adapter and benchmark responsibilities. CaracalDB should support them through generic entity lookup, vector search, and path traversal primitives, not by embedding GraphRAG-specific policies in the database core.
+
 #### Feature 4: Relation and Evidence Expansion
 
 Given initial semantic candidates or matched entities, the system must expand context through relation topology and evidence paths.
@@ -559,6 +573,11 @@ context_recall
 citation_coverage
 answer_grounding_score
 latency_seconds
+evidence_recall_at_context
+citation_recall
+answer_exact_match
+answer_contains_gold
+answer_token_f1
 ```
 
 Expected output:

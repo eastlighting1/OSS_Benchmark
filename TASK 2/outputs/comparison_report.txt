@@ -1,0 +1,8 @@
+# GraphRAG Configuration Comparison
+
+| Config | Architecture | Status | Total Seconds | Context Items | Semantic Entry | Relation Expand | Notes |
+| ------ | ------------ | ------ | ------------: | ------------: | -------------- | --------------- | ----- |
+| caracal-only | CaracalDB only | ok | 9.729259 | 396 | caracal_graphrag_search | caracal_graphrag_search |  |
+| neo4j-only | Neo4j only | ok | 13.611536 | 396 | neo4j_vector_index | cypher_planned_paths |  |
+| caracal-external-semantic | CaracalDB + external semantic index | ok | 12.310457 | 396 | caracal_graphrag_search | caracal_graphrag_search |  |
+| neo4j-external-semantic | Neo4j + external semantic index | ok | 9.289914 | 396 | chroma_persistent | cypher_planned_paths |  |
