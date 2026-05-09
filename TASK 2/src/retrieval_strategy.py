@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from collections import Counter
 
@@ -90,6 +91,18 @@ def build_retrieval_plan(
             require_source_diversity=False,
             answer_mode="insufficient_guard",
         )
+    if detected_type == "global_query":
+        return RetrievalPlan(
+            question_type=detected_type,
+            strategy="global_community_summary",
+            semantic_top_k=top_k + 12,
+            entity_top_k=12,
+            relation_depth=max(2, relation_depth),
+            evidence_budget=64,
+            citation_budget=6,
+            require_source_diversity=True,
+            answer_mode="comprehensive_summary",
+        )
     return RetrievalPlan(
         question_type=detected_type,
         strategy="inference_entity_evidence_paths",
@@ -109,6 +122,8 @@ def infer_question_type(question: str) -> str:
         return "comparison_query"
     if any(word in lowered for word in ("before", "after", "during", "earlier", "later", "first", "when")):
         return "temporal_query"
+    if any(word in lowered for word in ("summary", "summarize", "overall", "comprehensive", "general")):
+        return "global_query"
     return "inference_query"
 
 
@@ -123,10 +138,15 @@ def rerank_context_items(
         return context_items[: plan.evidence_budget], ""
 
     chunks_by_id = {chunk.chunk_id: chunk for chunk in artifacts.chunks}
+    entities_by_id = {entity.entity_id: entity for entity in artifacts.entities}
     question_tokens = significant_tokens(question)
     linked_names = [link.name.lower() for link in entity_links]
+    linked_entity_ids = {link.entity_id for link in entity_links}
     predicted_answer = predict_answer_candidate(question, context_items, artifacts, plan)
     predicted_lower = predicted_answer.lower()
+    
+    # Pre-calculate community sizes for normalization
+    community_sizes = Counter(c.community for c in artifacts.chunks if c.community != -1)
 
     rescored: list[ContextItem] = []
     for item in context_items:
@@ -138,13 +158,29 @@ def rerank_context_items(
         overlap = token_overlap(question_tokens, significant_tokens(chunk.text))
         entity_bonus = sum(1 for name in linked_names if name and name in chunk_lower)
         answer_bonus = 1.0 if predicted_lower and predicted_lower in chunk_lower else 0.0
-        score = item.score + 0.45 * overlap + 0.12 * entity_bonus + 0.35 * answer_bonus
+        
+        # Phase 2: Importance-based boosting using PageRank
+        # Reduced from 10.0 to 0.1 to prevent generic hubs from dominating specific answers
+        pagerank_bonus = chunk.pagerank * 0.1 
+        
+        # Phase 3: Context Coherence using Lynxes Communities (Normalized)
+        coherence_bonus = 0.0
+        if chunk.community != -1 and linked_entity_ids:
+            shared_entities = sum(1 for eid in linked_entity_ids if eid in entities_by_id and entities_by_id[eid].community == chunk.community)
+            if shared_entities > 0:
+                # Use Logarithmic normalization to penalize giant communities
+                # More shared entities = higher bonus; Larger community = lower density = lower bonus
+                comm_size = community_sizes.get(chunk.community, 1)
+                density_factor = 1.0 / math.log(2 + comm_size)
+                coherence_bonus = 0.75 * (shared_entities / len(linked_entity_ids)) * density_factor
+        
+        score = item.score + 0.45 * overlap + 0.12 * entity_bonus + 0.35 * answer_bonus + pagerank_bonus + coherence_bonus
         rescored.append(
             ContextItem(
                 node_id=item.node_id,
                 node_type=item.node_type,
                 score=score,
-                reason=f"{item.reason}; answer-aware rerank",
+                reason=f"{item.reason}; answer-aware rerank (PR: {chunk.pagerank:.4f}, Comm: {chunk.community})",
                 path=item.path,
             )
         )

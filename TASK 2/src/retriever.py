@@ -84,11 +84,16 @@ def run_retrieval(
         semantic_reentry_seconds = time.perf_counter() - started
 
         started = time.perf_counter()
+        if plan.strategy == "global_community_summary" and hasattr(adapter, "global_community_search"):
+            extra_context = adapter.global_community_search(plan)
+        else:
+            extra_context = adapter.evidence_path_expand(graph_candidates, query_entity_links, plan)
+            
         context_items = merge_context_items(
             [
                 *semantic_candidates_as_context(graph_candidates),
                 *entity_links_as_context(query_entity_links),
-                *adapter.evidence_path_expand(graph_candidates, query_entity_links, plan),
+                *extra_context,
             ]
         )
         relation_expansion_seconds = time.perf_counter() - started

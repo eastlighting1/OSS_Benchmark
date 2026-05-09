@@ -35,6 +35,8 @@ class Chunk:
     chunk_index: int
     text: str
     token_count: int
+    pagerank: float = 0.0
+    community: int = -1
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,7 @@ class Entity:
     canonical_name: str
     entity_type: str
     description: str = ""
+    community: int = -1
 
 
 @dataclass(frozen=True)

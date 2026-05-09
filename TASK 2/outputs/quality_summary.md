@@ -4,10 +4,10 @@ This report summarizes how well each configuration retrieves the correct context
 
 | Configuration             |   Context Recall (Accuracy) |   Answer Grounding |   Answer Similarity (F1) |   Avg Latency (s) |   Direct Match Rate |
 |:--------------------------|----------------------------:|-------------------:|-------------------------:|------------------:|--------------------:|
-| caracal-external-semantic |                    0.675    |                  1 |                 0.5      |         0.74272   |                 0.5 |
-| caracal-only              |                    0.641667 |                  1 |                 0.585714 |         0.698825  |                 0.6 |
-| neo4j-external-semantic   |                    0.791667 |                  1 |                 0.75     |         0.104358  |                 0.7 |
-| neo4j-only                |                    0.766667 |                  1 |                 0.7      |         0.0798419 |                 0.7 |
+| caracal-external-semantic |                    1        |                  1 |                 0.451429 |         0.0743499 |                 0.4 |
+| caracal-only              |                    1        |                  1 |                 0.46     |         0.103749  |                 0.4 |
+| neo4j-external-semantic   |                    0.933333 |                  1 |                 0.5      |         0.0449459 |                 0.2 |
+| neo4j-only                |                    0.933333 |                  1 |                 0.4      |         0.0398564 |                 0.2 |
 
 ## Metric Definitions
 - **Context Recall**: Probability that the retrieved documents contain the actual answer.

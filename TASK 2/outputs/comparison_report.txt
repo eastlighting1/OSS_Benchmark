@@ -2,7 +2,7 @@
 
 | Config | Architecture | Status | Total Seconds | Context Items | Semantic Entry | Relation Expand | Notes |
 | ------ | ------------ | ------ | ------------: | ------------: | -------------- | --------------- | ----- |
-| caracal-only | CaracalDB only | ok | 9.729259 | 396 | caracal_graphrag_search | caracal_graphrag_search |  |
-| neo4j-only | Neo4j only | ok | 13.611536 | 396 | neo4j_vector_index | cypher_planned_paths |  |
-| caracal-external-semantic | CaracalDB + external semantic index | ok | 12.310457 | 396 | caracal_graphrag_search | caracal_graphrag_search |  |
-| neo4j-external-semantic | Neo4j + external semantic index | ok | 9.289914 | 396 | chroma_persistent | cypher_planned_paths |  |
+| caracal-only | CaracalDB only | ok | 1.453285 | 192 | caracal_hnsw | caracal_evidence_search | lynxes_analytics_failed: name 'Entity' is not defined; deep_fusion_pull_failed: Database.neighbors() got an unexpected keyword argument 'return_properties'; deep_fusion_pull_failed: Database.neighbors() got an unexpected keyword argument 'return_properties'; deep_fusion_pull_failed: Database.neighbors() got an unexpected keyword argument 'return_properties'; deep_fusion_pull_failed: Database.neighbors() got an unexpected keyword argument 'return_properties'; deep_fusion_pull_failed: Database.neighbors() got an unexpected keyword argument 'return_properties' |
+| neo4j-only | Neo4j only | ok | 1.624376 | 192 | neo4j_vector_index | cypher_planned_paths |  |
+| caracal-external-semantic | CaracalDB + external semantic index | ok | 1.959287 | 192 | chroma_persistent | caracal_evidence_search | lynxes_analytics_failed: name 'Entity' is not defined |
+| neo4j-external-semantic | Neo4j + external semantic index | ok | 1.840547 | 192 | chroma_persistent | cypher_planned_paths |  |
