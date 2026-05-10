@@ -226,3 +226,4 @@ data/MultiHopRAG.json
 TASK 2/data/processed/
 TASK 2/profile_caracal.py
 TASK 2/caracaldb_development_requirements.md
+TASK 2/outputs/retrieval_trace.jsonl

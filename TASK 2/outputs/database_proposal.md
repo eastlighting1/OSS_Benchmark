@@ -7,8 +7,8 @@ CaracalDB stores source nodes, chunk nodes, entity nodes, embeddings, relation t
 
 ## Current Benchmark Signal
 
-- CaracalDB only: status=ok, semantic=caracal_hnsw, relation=caracal_evidence_search, total=1.4532847999944352
-- CaracalDB + external semantic index: status=ok, semantic=chroma_persistent, relation=caracal_evidence_search, total=1.9592865998856723
+- CaracalDB only: status=ok, semantic=exact_scan, relation=memory_bfs_fallback, total=147.90361799974926
+- CaracalDB + external semantic index: status=ok, semantic=chroma_persistent, relation=memory_bfs_fallback, total=79.28788599953987
 
 ## Interpretation
 

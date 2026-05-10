@@ -4,6 +4,12 @@ from .models import Answer, Citation, Chunk, ContextItem, GraphArtifacts, Retrie
 from .retrieval_strategy import significant_tokens, token_overlap
 
 
+from functools import lru_cache
+
+@lru_cache(maxsize=10000)
+def significant_tokens_cached(text: str) -> frozenset[str]:
+    return frozenset(significant_tokens(text))
+
 def generate_answer_and_citations(
     trace: RetrievalTrace,
     artifacts: GraphArtifacts,
@@ -67,14 +73,14 @@ def select_citation_chunks(
     max_citations: int,
 ) -> list[Chunk]:
     scored: list[tuple[float, int, Chunk]] = []
-    question_tokens = significant_tokens(question)
+    question_tokens = significant_tokens_cached(question)
     answer_lower = predicted_answer.lower().strip()
     for position, item in enumerate(context_items):
         if not item.node_id.startswith("chunk:") or item.node_id not in chunks_by_id:
             continue
         chunk = chunks_by_id[item.node_id]
         chunk_lower = chunk.text.lower()
-        overlap = token_overlap(question_tokens, significant_tokens(chunk.text))
+        overlap = token_overlap(question_tokens, significant_tokens_cached(chunk.text))
         answer_bonus = 0.5 if answer_lower and answer_lower in chunk_lower else 0.0
         path_bonus = 0.12 if len(item.path) >= 3 else 0.0
         score = item.score + 0.55 * overlap + answer_bonus + path_bonus
@@ -106,7 +112,7 @@ def diversify_citation_chunks(scored: list[tuple[float, int, Chunk]], max_citati
 
 
 def citation_confidence(question: str, predicted_answer: str, chunk: Chunk) -> float:
-    overlap = token_overlap(significant_tokens(question), significant_tokens(chunk.text))
+    overlap = token_overlap(significant_tokens_cached(question), significant_tokens_cached(chunk.text))
     answer_bonus = 0.25 if predicted_answer and predicted_answer.lower() in chunk.text.lower() else 0.0
     return min(1.0, 0.5 + 0.5 * overlap + answer_bonus)
 
