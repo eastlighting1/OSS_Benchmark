@@ -223,6 +223,11 @@ data/tmdb_5000_credits.csv
 data/tmdb_5000_movies.csv
 data/corpus.json
 data/MultiHopRAG.json
+data/edge.csv
+data/node_year.csv
+data/node-feat.csv
+data/node-label.csv
+
 TASK 2/data/processed/
 TASK 2/profile_caracal.py
 TASK 2/caracaldb_development_requirements.md

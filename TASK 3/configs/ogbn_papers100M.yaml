@@ -1,0 +1,8 @@
+dataset: ogbn-papers100M
+batch_size: 1024
+fanouts: [15, 10, 5]
+epochs: 5
+lr: 0.01
+hidden_channels: 256
+num_layers: 3
+caracal_db_name: ogbn_papers_db
