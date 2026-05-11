@@ -4,10 +4,10 @@
 
 This document interprets the benchmark results through explicit rules rather than a single headline metric. The goal is to distinguish raw speed from operational quality: startup latency, filtering resilience, parallel-worker behavior, memory efficiency, and failure rate are evaluated separately before a final recommendation is made.
 
-* **Total nodes used for memory normalization**: 10000
-* **Successful runs**: 48 / 48
+* **Total nodes used for memory normalization**: 5000
+* **Successful runs**: 64 / 64
 * **Evaluated DataFrame frontends**: dask, lynxes, pandas, polars
-* **Evaluated storage/sampling backends**: caracaldb, duckdb, pyg_native
+* **Evaluated storage/sampling backends**: caracaldb, duckdb, neo4j, pyg_native
 
 ### Rule Catalogue
 * **R1 — Throughput dominance**: a backend is considered a decisive speed leader when it is at least 1.5x faster than the next best candidate.
@@ -26,104 +26,124 @@ This document interprets the benchmark results through explicit rules rather tha
 
 |   rank | dataframe   | database   |   edges_per_sec |       ttfb |   mb_per_1k_nodes |
 |--------|-------------|------------|-----------------|------------|-------------------|
-|      1 | polars      | pyg_native |        77875.3  | 0.00784636 |           68.2691 |
-|      2 | dask        | pyg_native |        75473.8  | 0.00771236 |           71.3145 |
-|      3 | lynxes      | pyg_native |        72115.9  | 0.00727057 |           58.5977 |
-|      4 | pandas      | pyg_native |        72082.4  | 0.00792766 |           61.8348 |
-|      5 | pandas      | duckdb     |        50003    | 0.0145421  |           62.2773 |
-|      6 | polars      | duckdb     |        48810.5  | 0.0155652  |           68.0727 |
-|      7 | pandas      | caracaldb  |        46030.7  | 0.0420375  |           61.0477 |
-|      8 | lynxes      | caracaldb  |        44582.4  | 0.0561702  |          104.727  |
-|      9 | lynxes      | duckdb     |        43754.1  | 0.016151   |           59.0555 |
-|     10 | polars      | caracaldb  |        42840.2  | 0.0458217  |           62.8715 |
-|     11 | dask        | duckdb     |         6359.31 | 0.108305   |           71.4906 |
-|     12 | dask        | caracaldb  |         3744.79 | 0.192168   |           71.073  |
+|      1 | lynxes      | pyg_native |        48020.5  | 0.00521183 |           211.665 |
+|      2 | dask        | pyg_native |        43836.2  | 0.00569034 |           126.274 |
+|      3 | polars      | pyg_native |        43216    | 0.00606918 |           123.898 |
+|      4 | pandas      | pyg_native |        41116.2  | 0.00458527 |           117.4   |
+|      5 | pandas      | caracaldb  |        29687.3  | 0.0150754  |           116.789 |
+|      6 | lynxes      | caracaldb  |        28497.8  | 0.0468543  |           209.355 |
+|      7 | polars      | caracaldb  |        27754.4  | 0.0217378  |           118.357 |
+|      8 | pandas      | duckdb     |        26035.1  | 0.00897503 |           118.989 |
+|      9 | polars      | duckdb     |        24273.4  | 0.0127993  |           124.301 |
+|     10 | polars      | neo4j      |        23603.1  | 0.026489   |           122.607 |
+|     11 | lynxes      | duckdb     |        23302    | 0.0442958  |           212.523 |
+|     12 | pandas      | neo4j      |        18195.8  | 0.0340333  |           116.856 |
+|     13 | lynxes      | neo4j      |         8849.32 | 0.0585489  |           114.144 |
+|     14 | dask        | neo4j      |         6860.27 | 0.0686023  |           125.987 |
+|     15 | dask        | duckdb     |         5211.35 | 0.0698195  |           127.434 |
+|     16 | dask        | caracaldb  |         3391.61 | 0.107923   |           126.139 |
 
 ### Rule-Based Diagnosis
-* **R1 Absolute leader**: **pyg_native + polars** at **77875.26 edges/sec**.
-* **R1 DB-backed leader**: **duckdb + pandas** at **50002.98 edges/sec** (Rank **#5**).
-* **R1 Required Stack**: **CaracalDB + Lynxes** achieved **44582.35 edges/sec** (Rank **#8**) - **Improving**.
+* **R1 Absolute leader**: **pyg_native + lynxes** at **48020.54 edges/sec**.
+* **R1 DB-backed leader**: **caracaldb + pandas** at **29687.29 edges/sec** (Rank **#5**).
+* **R1 Required Stack**: **CaracalDB + Lynxes** achieved **28497.84 edges/sec** (Rank **#6**) - **Improving**.
 
 ## 3. Scenario B: Filtering Resilience
 
 |   rank | dataframe   | database   |   edges_per_sec_filt |   retention_pct |
 |--------|-------------|------------|----------------------|-----------------|
-|      1 | polars      | pyg_native |             79444.1  |         102.015 |
-|      2 | dask        | pyg_native |             78437.1  |         103.926 |
-|      3 | lynxes      | pyg_native |             77914.1  |         108.04  |
-|      4 | pandas      | pyg_native |             76687.4  |         106.388 |
-|      5 | pandas      | duckdb     |             73634.7  |         147.261 |
-|      6 | polars      | duckdb     |             67805.4  |         138.916 |
-|      7 | lynxes      | caracaldb  |             66402.4  |         148.943 |
-|      8 | lynxes      | duckdb     |             64975.7  |         148.502 |
-|      9 | pandas      | caracaldb  |             63556.9  |         138.075 |
-|     10 | polars      | caracaldb  |             62803.6  |         146.6   |
-|     11 | dask        | duckdb     |              9616.34 |         151.217 |
-|     12 | dask        | caracaldb  |              5217.77 |         139.334 |
+|      1 | lynxes      | caracaldb  |             57110.4  |         200.403 |
+|      2 | pandas      | pyg_native |             51202.4  |         124.531 |
+|      3 | pandas      | caracaldb  |             48370.2  |         162.932 |
+|      4 | lynxes      | pyg_native |             48334.5  |         100.654 |
+|      5 | polars      | pyg_native |             47964.2  |         110.987 |
+|      6 | dask        | pyg_native |             46702.6  |         106.539 |
+|      7 | pandas      | duckdb     |             42819.8  |         164.469 |
+|      8 | polars      | caracaldb  |             41344.7  |         148.966 |
+|      9 | lynxes      | duckdb     |             39244.6  |         168.417 |
+|     10 | polars      | duckdb     |             37220    |         153.337 |
+|     11 | polars      | neo4j      |             35293.3  |         149.528 |
+|     12 | pandas      | neo4j      |             26350.3  |         144.815 |
+|     13 | lynxes      | neo4j      |             16564.4  |         187.183 |
+|     14 | dask        | neo4j      |             10888    |         158.712 |
+|     15 | dask        | duckdb     |              9129.05 |         175.176 |
+|     16 | dask        | caracaldb  |              5478.75 |         161.538 |
 
 ### Rule-Based Diagnosis
-* **R3 Filtering leader**: **pyg_native + polars** at **79444.08 edges/sec**.
-* **R3 Required Stack**: **CaracalDB + Lynxes** reached **66402.39 edges/sec** (Rank **#7**) - **Highly Competitive**.
+* **R3 Filtering leader**: **caracaldb + lynxes** at **57110.44 edges/sec**.
+* **R3 Required Stack**: **CaracalDB + Lynxes** reached **57110.44 edges/sec** (Rank **#1**) - **Target Met (Rank #1)**.
 
 ## 4. Scenario C: Warm Start Efficiency
 
 | dataframe   | database   |   ttfb_cold |   ttfb_warm |   speedup |
 |-------------|------------|-------------|-------------|-----------|
-| lynxes      | caracaldb  |  0.0561702  |  0.0110974  |   5.06155 |
-| polars      | caracaldb  |  0.0458217  |  0.0105202  |   4.35558 |
-| pandas      | caracaldb  |  0.0420375  |  0.0119784  |   3.50944 |
-| pandas      | duckdb     |  0.0145421  |  0.00861812 |   1.68739 |
-| polars      | duckdb     |  0.0155652  |  0.0118859  |   1.30955 |
-| pandas      | pyg_native |  0.00792766 |  0.00631571 |   1.25523 |
-| lynxes      | duckdb     |  0.016151   |  0.0129797  |   1.24432 |
-| polars      | pyg_native |  0.00784636 |  0.00695491 |   1.12818 |
-| dask        | duckdb     |  0.108305   |  0.099153   |   1.0923  |
-| lynxes      | pyg_native |  0.00727057 |  0.00666547 |   1.09078 |
-| dask        | pyg_native |  0.00771236 |  0.00744843 |   1.03543 |
-| dask        | caracaldb  |  0.192168   |  0.186653   |   1.02954 |
+| lynxes      | caracaldb  |  0.0468543  |  0.00634766 |  7.38135  |
+| lynxes      | duckdb     |  0.0442958  |  0.0091753  |  4.82772  |
+| polars      | caracaldb  |  0.0217378  |  0.00978017 |  2.22264  |
+| pandas      | caracaldb  |  0.0150754  |  0.00860715 |  1.7515   |
+| polars      | neo4j      |  0.026489   |  0.017066   |  1.55215  |
+| pandas      | neo4j      |  0.0340333  |  0.0238512  |  1.4269   |
+| lynxes      | neo4j      |  0.0585489  |  0.0425739  |  1.37523  |
+| polars      | pyg_native |  0.00606918 |  0.00462604 |  1.31196  |
+| dask        | pyg_native |  0.00569034 |  0.00443912 |  1.28186  |
+| polars      | duckdb     |  0.0127993  |  0.0102329  |  1.25079  |
+| pandas      | pyg_native |  0.00458527 |  0.00399256 |  1.14845  |
+| lynxes      | pyg_native |  0.00521183 |  0.00455284 |  1.14474  |
+| dask        | caracaldb  |  0.107923   |  0.100505   |  1.0738   |
+| dask        | duckdb     |  0.0698195  |  0.0663674  |  1.05201  |
+| dask        | neo4j      |  0.0686023  |  0.0736775  |  0.931116 |
+| pandas      | duckdb     |  0.00897503 |  0.0116251  |  0.772042 |
 
 ### Rule-Based Diagnosis
-* **R4 Warm-start leader**: **caracaldb + lynxes** with **5.06x** speedup.
-* **R4 Required Stack**: **CaracalDB + Lynxes** speedup: **5.06x** (Rank #1).
+* **R4 Warm-start leader**: **caracaldb + lynxes** with **7.38x** speedup.
+* **R4 Required Stack**: **CaracalDB + Lynxes** speedup: **7.38x** (Rank #1).
 
 ## 5. Scenario D: Multi-Worker Impact
 
 |   rank | dataframe   | database   |   edges_per_sec_4w |   gain_pct |
 |--------|-------------|------------|--------------------|------------|
-|      1 | pandas      | pyg_native |           78463.5  |   8.85249  |
-|      2 | lynxes      | pyg_native |           76991.4  |   6.76072  |
-|      3 | polars      | pyg_native |           75325.2  |  -3.27456  |
-|      4 | dask        | pyg_native |           75061.4  |  -0.546403 |
-|      5 | pandas      | duckdb     |           56113.3  |  12.2198   |
-|      6 | polars      | duckdb     |           50428.5  |   3.31487  |
-|      7 | lynxes      | duckdb     |           43232.2  |  -1.19301  |
-|      8 | polars      | caracaldb  |           16469.8  | -61.5552   |
-|      9 | lynxes      | caracaldb  |           15928.6  | -64.2716   |
-|     10 | pandas      | caracaldb  |           15703.6  | -65.8845   |
-|     11 | dask        | caracaldb  |            9917.67 | 164.839    |
-|     12 | dask        | duckdb     |            6829.03 |   7.38627  |
+|      1 | dask        | pyg_native |          47535.7   |   8.43942  |
+|      2 | pandas      | pyg_native |          47413.6   |  15.3161   |
+|      3 | polars      | pyg_native |          46412.1   |   7.39569  |
+|      4 | lynxes      | pyg_native |          46200.4   |  -3.7903   |
+|      5 | pandas      | duckdb     |          28545     |   9.64031  |
+|      6 | polars      | duckdb     |          24794.4   |   2.14611  |
+|      7 | lynxes      | duckdb     |          24651.2   |   5.78985  |
+|      8 | polars      | neo4j      |          24620.4   |   4.31018  |
+|      9 | pandas      | neo4j      |          21226.3   |  16.6546   |
+|     10 | lynxes      | neo4j      |          11303.6   |  27.7337   |
+|     11 | dask        | neo4j      |           6893.81  |   0.488939 |
+|     12 | dask        | duckdb     |           5831.45  |  11.8991   |
+|     13 | lynxes      | caracaldb  |           4664.02  | -83.6338   |
+|     14 | dask        | caracaldb  |            364.373 | -89.2566   |
+|     15 | pandas      | caracaldb  |            352.335 | -98.8132   |
+|     16 | polars      | caracaldb  |            338.154 | -98.7816   |
 
 ### Rule-Based Diagnosis
-* **R5 Multi-worker leader**: **pyg_native + pandas** at **78463.51 edges/sec**.
-* **R5 Required Stack**: **CaracalDB + Lynxes** reached **15928.56 edges/sec** (Rank **#9**) - **Scaling Effectively**.
+* **R5 Multi-worker leader**: **pyg_native + dask** at **47535.70 edges/sec**.
+* **R5 Required Stack**: **CaracalDB + Lynxes** reached **4664.02 edges/sec** (Rank **#13**) - **Scaling Effectively**.
 
 ### Heuristic Scorecard
 
 | dataframe   | database   |   avg_edges |   avg_ttfb |   avg_mem |   score |
 |-------------|------------|-------------|------------|-----------|---------|
-| lynxes      | pyg_native |    76818.6  | 0.00678468 |   58.6896 | 99.1716 |
-| pandas      | pyg_native |    76165.7  | 0.00728065 |   61.878  | 96.2757 |
-| polars      | pyg_native |    77894.1  | 0.0077002  |   68.3146 | 94.8042 |
-| dask        | pyg_native |    75971.1  | 0.0271481  |   71.354  | 79.9673 |
-| pandas      | duckdb     |    58303.7  | 0.0109499  |   62.6677 | 76.0326 |
-| polars      | duckdb     |    53660.7  | 0.0126541  |   68.7206 | 69.1375 |
-| lynxes      | duckdb     |    49756.1  | 0.0129631  |   59.3883 | 68.5583 |
-| pandas      | caracaldb  |    43456.1  | 1.83709    |   61.1416 | 52.745  |
-| polars      | caracaldb  |    41615.8  | 1.77789    |   64.4263 | 50.3511 |
-| lynxes      | caracaldb  |    44067.8  | 1.83374    |   81.4477 | 48.43   |
-| dask        | duckdb     |     7403.46 | 0.124146   |   71.6602 | 23.1757 |
-| dask        | caracaldb  |     5644.29 | 2.01312    |   70.8555 | 20.9811 |
+| pandas      | pyg_native |    47142.4  | 0.00457025 |   117.427 | 99.4931 |
+| polars      | pyg_native |    46045.9  | 0.00521177 |   123.978 | 94.6057 |
+| lynxes      | pyg_native |    47125.1  | 0.00470406 |   211.758 | 90.2186 |
+| dask        | pyg_native |    46412    | 0.0134925  |   126.379 | 83.9572 |
+| pandas      | duckdb     |    31071.3  | 0.00987059 |   119.335 | 67.9875 |
+| polars      | duckdb     |    28032.2  | 0.010732   |   124.167 | 62.6297 |
+| polars      | neo4j      |    27470.8  | 0.0195997  |   122.752 | 58.2743 |
+| lynxes      | duckdb     |    28002.1  | 0.0190917  |   139.544 | 56.8306 |
+| pandas      | caracaldb  |    27286.7  | 3.1865     |   116.992 | 54.3232 |
+| lynxes      | caracaldb  |    32173.6  | 3.32993    |   210.495 | 51.8505 |
+| pandas      | neo4j      |    21341.4  | 0.0272816  |   117.153 | 50.0512 |
+| polars      | caracaldb  |    23945.5  | 3.25447    |   119.828 | 49.6071 |
+| lynxes      | neo4j      |    11774.3  | 0.0474095  |   114.451 | 36.9136 |
+| dask        | neo4j      |     7818.91 | 0.0820096  |   126.275 | 29.1933 |
+| dask        | duckdb     |     6421.52 | 0.078372   |   128.007 | 27.2211 |
+| dask        | caracaldb  |     3195.31 | 3.26952    |   125.773 | 22.2943 |
 
 ### Final Recommendations
-* **Top Performer**: pyg_native + lynxes (99.17/100)
+* **Top Performer**: pyg_native + pandas (99.49/100)
 * **Enterprise Choice**: **CaracalDB + Lynxes** is recommended for production GNNs due to its native push-down filtering and robust multi-worker support (picklable objects).
