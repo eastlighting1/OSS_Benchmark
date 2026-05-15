@@ -9,11 +9,23 @@ import pyarrow.csv as pv
 import pyarrow as pa
 
 def create_lynxes_node_frame(table, label):
-    data = table.to_pydict()
     n = table.num_rows
-    data["_id"] = [str(i) for i in range(n)]
-    data["_label"] = [[label]] * n
-    return lynxes.NodeFrame.from_dict(data)
+    table = table.append_column("_id", pa.array([str(i) for i in range(n)], type=pa.string()))
+    table = table.append_column(
+        "_label",
+        pa.array([[label] for _ in range(n)], type=pa.list_(pa.string())),
+    )
+    columns = ["_id", "_label", *[name for name in table.column_names if not name.startswith("_")]]
+    selected = table.select(columns).combine_chunks()
+    batches = selected.to_batches(max_chunksize=max(1, selected.num_rows))
+    if batches:
+        batch = batches[0]
+    else:
+        batch = pa.RecordBatch.from_arrays(
+            [pa.array([], type=field.type) for field in selected.schema],
+            schema=selected.schema,
+        )
+    return lynxes.NodeFrame.from_arrow(batch)
 
 def load_gnn_data(config: BenchmarkConfig):
     sample_n = config.sample_nodes
@@ -80,6 +92,12 @@ def gather_df_rows(df, indices):
 
 def convert_to_tensor(df, column_names=None):
     # THIN DELEGATION: Favor library native tensor conversion
+    if df.__class__.__module__.split(".", 1)[0] == "lynxes" and hasattr(df, "to_tensor"):
+        kwargs = {"dtype": "float32"}
+        if column_names is not None:
+            kwargs["columns"] = column_names
+        return df.to_tensor(**kwargs)
+
     if hasattr(df, "to_torch_tensor"):
         return df.to_torch_tensor(column_names)
 

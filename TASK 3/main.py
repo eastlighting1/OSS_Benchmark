@@ -39,7 +39,8 @@ def main():
     compare_parser = subparsers.add_parser("compare", help="Run 4x4 comparison matrix")
     compare_parser.add_argument("--dataset", type=str, default="ogbn-arxiv")
     compare_parser.add_argument("--data-dir", type=str, default="../data")
-    compare_parser.add_argument("--sample-nodes", type=int, default=10000)
+    compare_parser.add_argument("--sample-nodes", type=int, default=50000)
+    compare_parser.add_argument("--runs", type=int, default=3, help="Number of benchmark repetitions for median calculation")
     compare_parser.add_argument("--skip-ingest", action="store_true", help="Skip ingestion for all backends")
 
     args = parser.parse_args()
@@ -63,7 +64,7 @@ def main():
     elif args.command == "compare":
         from src.compare_systems import ComparisonSystem, export_results
         from src.ingest import load_gnn_data, get_df_len
-        config = get_config(dataset=args.dataset, data_dir=args.data_dir, epochs=1, sample_nodes=args.sample_nodes)
+        config = get_config(dataset=args.dataset, data_dir=args.data_dir, epochs=1, sample_nodes=args.sample_nodes, runs=args.runs)
         comparer = ComparisonSystem(config, skip_ingest=args.skip_ingest)
         results = comparer.run_benchmark()
         output_path = Path("outputs/comparison_benchmark.csv")

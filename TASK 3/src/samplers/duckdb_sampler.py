@@ -3,14 +3,16 @@ import numpy as np
 import time
 
 class DuckDBSampler:
-    def __init__(self, conn, node_features, fanouts, batch_size, scenario="default", filter_data=None):
+    def __init__(self, conn, node_features, node_labels, fanouts, batch_size, scenario="default", filter_data=None, filter_year=2014):
         from ..ingest import get_df_len
         self.conn = conn
         self.node_features = node_features
+        self.node_labels = node_labels
         self.fanouts = fanouts
         self.batch_size = batch_size
         self.scenario = scenario
         self.filter_data = filter_data
+        self.filter_year = filter_year
         self.total_nodes = get_df_len(node_features)
         self.num_nodes = self.total_nodes 
         self.indices = np.arange(self.total_nodes)
@@ -19,8 +21,7 @@ class DuckDBSampler:
         if self.scenario == "filtered" and self.filter_data is not None:
             from ..ingest import convert_to_tensor
             years = convert_to_tensor(self.filter_data).flatten()
-            threshold = float(torch.median(years))
-            mask = (years >= threshold).numpy()
+            mask = (years >= self.filter_year).numpy()
             self.indices = self.indices[mask[:len(self.indices)]]
 
         np.random.shuffle(self.indices)
@@ -42,31 +43,56 @@ class DuckDBSampler:
         seeds = [int(x) for x in batch_indices]
         seed_str = ",".join(map(str, seeds))
         
-        # STRICT 2-HOP Recursive JOIN (Real Load)
-        query = f"""
-            WITH hop1 AS (
-                SELECT src, dst FROM edges WHERE src IN ({seed_str}) LIMIT {len(seeds) * self.fanouts[0]}
-            ),
-            hop2 AS (
-                SELECT e.src, e.dst FROM edges e JOIN hop1 h ON e.src = h.dst LIMIT {len(seeds) * self.fanouts[1]}
-            )
-            SELECT src, dst FROM hop1 UNION SELECT src, dst FROM hop2
-        """
-        res = self.conn.execute(query).fetchall()
-        
         all_nodes = set(seeds)
         edge_list = []
-        for src, dst in res:
-            edge_list.append([src, dst])
-            all_nodes.add(dst)
 
-        node_list = list(all_nodes)
+        current_layer = seeds
+        for hop, fanout in enumerate(self.fanouts):
+            if len(current_layer) == 0:
+                break
+
+            frontier = ",".join(map(str, (int(x) for x in current_layer)))
+            # Match CaracalDB/PyG semantics: sample up to `fanout` edges per
+            # source node, not a global LIMIT across the whole frontier.
+            query = f"""
+                SELECT src, dst
+                FROM (
+                    SELECT
+                        src,
+                        dst,
+                        row_number() OVER (
+                            PARTITION BY src
+                            ORDER BY hash(src, dst, {hop})
+                        ) AS rn
+                    FROM edges
+                    WHERE src IN ({frontier})
+                )
+                WHERE rn <= {int(fanout)}
+            """
+            res = self.conn.execute(query).fetchall()
+            if not res:
+                break
+
+            next_layer = []
+            for src, dst in res:
+                src = int(src)
+                dst = int(dst)
+                edge_list.append([src, dst])
+                if dst not in all_nodes:
+                    all_nodes.add(dst)
+                next_layer.append(dst)
+            current_layer = np.unique(np.asarray(next_layer, dtype=np.int64))
+
+        # Keep seed nodes first, matching the CaracalDB loader contract used
+        # by the benchmark label slicing.
+        node_list = seeds + [node for node in all_nodes if node not in seeds]
         node_indices = [int(n) for n in node_list if n < self.total_nodes]
         
         from ..ingest import gather_df_rows, convert_to_tensor
         batch_feat_df = gather_df_rows(self.node_features, node_indices)
         x = convert_to_tensor(batch_feat_df)
-        y = torch.zeros(len(seeds)) # Labels placeholder for benchmark
+        batch_label_df = gather_df_rows(self.node_labels, seeds)
+        y = convert_to_tensor(batch_label_df)
         
         # Build local edge index
         node_map = {node_id: i for i, node_id in enumerate(node_list)}

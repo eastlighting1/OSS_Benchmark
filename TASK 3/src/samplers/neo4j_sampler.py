@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 class Neo4jSampler:
-    def __init__(self, driver, node_features, fanouts, batch_size, scenario="default", filter_data=None):
+    def __init__(self, driver, node_features, fanouts, batch_size, scenario="default", filter_data=None, filter_year=2014):
         from ..ingest import get_df_len
         self.driver = driver
         self.node_features = node_features
@@ -11,6 +11,7 @@ class Neo4jSampler:
         self.batch_size = batch_size
         self.scenario = scenario
         self.filter_data = filter_data
+        self.filter_year = filter_year
         self.total_nodes = get_df_len(node_features)
         self.indices = np.arange(self.total_nodes)
         
@@ -18,8 +19,7 @@ class Neo4jSampler:
         if self.scenario == "filtered" and self.filter_data is not None:
             from ..ingest import convert_to_tensor
             years = convert_to_tensor(self.filter_data).flatten()
-            threshold = float(torch.median(years))
-            mask = (years >= threshold).numpy()
+            mask = (years >= self.filter_year).numpy()
             self.indices = self.indices[mask[:len(self.indices)]]
 
         np.random.shuffle(self.indices)

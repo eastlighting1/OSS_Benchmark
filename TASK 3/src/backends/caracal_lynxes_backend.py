@@ -17,7 +17,7 @@ class CaracalLynxesBackend(BaseBackend):
         
     def ingest(self, node_feat_df, node_label_df, node_year_df, edge_df):
         from ..ingest import get_df_len, get_df_cols
-        print(f"Ingesting data into caracaldb at {self.db_path} (Library-Core Native)")
+        print(f"Ingesting data into caracaldb at {self.db_path}")
         
         # Preserve frames for sampling/fetching
         self.node_features = node_feat_df
@@ -104,25 +104,44 @@ class CaracalLynxesBackend(BaseBackend):
             self._db = caracaldb.connect(self.db_path, format="bundle", mode="ro")
         return self._db
 
-    def get_sampler(self, fanouts: List[int], batch_size: int, scenario: str = "default", filter_data: Any = None, num_workers: int = 0):
+    def get_sampler(
+        self,
+        fanouts: List[int],
+        batch_size: int,
+        scenario: str = "default",
+        filter_data: Any = None,
+        num_workers: int = 0,
+        filter_year: int | None = None,
+    ):
         # Ensure we have the frames even in warm start
         if self.node_features is None and filter_data is not None:
              # In warm start, the pipeline passes filter_data (year) but we might need features
              # For the benchmark, we assume the caller ensures backend has frames
              pass
         from ..samplers.caracal_sampler import CaracalSampler
-        sampler = CaracalSampler(self._get_db(), self.node_features, self.node_labels, fanouts, batch_size, scenario=scenario, filter_data=filter_data)
-        
-        if num_workers > 0:
-            from torch.utils.data import DataLoader
-            return DataLoader(sampler, batch_size=None, num_workers=num_workers)
+        sampler = CaracalSampler(
+            self._get_db(),
+            self.node_features,
+            self.node_labels,
+            fanouts,
+            batch_size,
+            scenario=scenario,
+            filter_data=filter_data,
+            num_workers=num_workers,
+            filter_year=filter_year if filter_year is not None else self.config.filter_year,
+        )
         return sampler
 
-    def fetch_features(self, node_ids: torch.Tensor) -> torch.Tensor:
-        # Use library-native to_tensor
+    def fetch_features(self, node_ids: torch.Tensor, out: Optional[torch.Tensor] = None) -> torch.Tensor:
         if hasattr(self.node_features, "to_tensor"):
-            return self.node_features.to_tensor(indices=node_ids.tolist())
-        
+            try:
+                # Try positional arguments for our locally patched Rust extension
+                return self.node_features.to_tensor(None, node_ids, "float32", None, True, out)
+            except TypeError:
+                # Fallback to keyword arguments (will error if out is provided but not supported)
+                if out is not None:
+                    raise
+                return self.node_features.to_tensor(indices=node_ids, dtype="float32")
         from ..ingest import gather_df_rows, convert_to_tensor
         indices = node_ids.tolist()
         batch_feat_df = gather_df_rows(self.node_features, indices)

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborLoader
-from typing import List
+from typing import Any, List
 from .base import BaseBackend
 from ..config import BenchmarkConfig
 from ..ingest import convert_to_tensor, get_edge_index
@@ -20,18 +20,33 @@ class PyGNativeBackend(BaseBackend):
         
         self.data = Data(x=x, y=y, edge_index=edge_index)
 
-    def get_sampler(self, fanouts: List[int], batch_size: int, scenario: str = "default", filter_data: Any = None, num_workers: int = 0):
+    def get_sampler(
+        self,
+        fanouts: List[int],
+        batch_size: int,
+        scenario: str = "default",
+        filter_data: Any = None,
+        num_workers: int = 0,
+        filter_year: int | None = None,
+    ):
         if self.data is None:
             raise ValueError("Data not ingested. Call ingest() first.")
         
         # Use our robust, dependency-free sampler instead of NeighborLoader
-        return PureTorchNeighborSampler(self.data, fanouts, batch_size, scenario=scenario, filter_data=filter_data)
+        return PureTorchNeighborSampler(
+            self.data,
+            fanouts,
+            batch_size,
+            scenario=scenario,
+            filter_data=filter_data,
+            filter_year=filter_year if filter_year is not None else self.config.filter_year,
+        )
         
     def fetch_features(self, node_ids: torch.Tensor) -> torch.Tensor:
         return self.data.x[node_ids.long()]
 
 class PureTorchNeighborSampler:
-    def __init__(self, data, fanouts, batch_size, scenario="default", filter_data=None):
+    def __init__(self, data, fanouts, batch_size, scenario="default", filter_data=None, filter_year=2014):
         self.data = data
         self.fanouts = fanouts
         self.batch_size = batch_size
@@ -39,13 +54,13 @@ class PureTorchNeighborSampler:
         self.indices = np.arange(self.total_nodes)
         self.scenario = scenario
         self.filter_data = filter_data
+        self.filter_year = filter_year
         
         # Scenario: Filtered (Filter SEEDS, not the graph space)
         if self.scenario == "filtered" and self.filter_data is not None:
             from ..ingest import convert_to_tensor
             years = convert_to_tensor(self.filter_data).flatten()
-            # Use a more inclusive filter to ensure data
-            mask = (years >= 2010).numpy() 
+            mask = (years >= self.filter_year).numpy()
             self.indices = self.indices[mask[:len(self.indices)]]
             print(f"PyG Native: Filtered seeds to {len(self.indices)} nodes.")
 
@@ -73,10 +88,10 @@ class PureTorchNeighborSampler:
         batch_indices = self.indices[self.current_idx:self.current_idx + self.batch_size]
         self.current_idx += self.batch_size
         
-        all_nodes = set(batch_indices)
+        all_nodes = set(int(node) for node in batch_indices)
         edge_list = []
         
-        current_layer = list(batch_indices)
+        current_layer = [int(node) for node in batch_indices]
         for fanout in self.fanouts:
             next_layer = []
             for node in current_layer:
@@ -84,13 +99,15 @@ class PureTorchNeighborSampler:
                 if neighbors:
                     sampled = np.random.choice(neighbors, min(len(neighbors), fanout), replace=False)
                     for s in sampled:
+                        s = int(s)
                         edge_list.append([node, s])
                         if s not in all_nodes:
                             all_nodes.add(s)
-                            next_layer.append(s)
+                        next_layer.append(s)
             current_layer = next_layer
 
-        node_list = list(all_nodes)
+        seeds = [int(node) for node in batch_indices]
+        node_list = seeds + [node for node in all_nodes if node not in seeds]
         node_map = {node_id: i for i, node_id in enumerate(node_list)}
         
         local_edges = [[node_map[s], node_map[d]] for s, d in edge_list]

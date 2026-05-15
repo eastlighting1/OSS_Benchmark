@@ -67,9 +67,25 @@ class Neo4jBackend(BaseBackend):
                 """, data=batch)
         print("Neo4j Ingestion complete.")
 
-    def get_sampler(self, fanouts: List[int], batch_size: int, scenario: str = "default", filter_data: Any = None, num_workers: int = 0):
+    def get_sampler(
+        self,
+        fanouts: List[int],
+        batch_size: int,
+        scenario: str = "default",
+        filter_data: Any = None,
+        num_workers: int = 0,
+        filter_year: int | None = None,
+    ):
         from ..samplers.neo4j_sampler import Neo4jSampler
-        return Neo4jSampler(self.driver, self.node_features, fanouts, batch_size, scenario=scenario, filter_data=filter_data)
+        return Neo4jSampler(
+            self.driver,
+            self.node_features,
+            fanouts,
+            batch_size,
+            scenario=scenario,
+            filter_data=filter_data,
+            filter_year=filter_year if filter_year is not None else self.config.filter_year,
+        )
 
     def fetch_features(self, node_ids: torch.Tensor) -> torch.Tensor:
         from ..ingest import gather_df_rows, convert_to_tensor

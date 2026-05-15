@@ -105,12 +105,33 @@ class ComparisonSystem:
                         num_workers = 8 if scenario == "multi_worker" else 0
                         filter_data = node_year if scenario == "filtered" else None
                         
-                        loader = backend.get_sampler(self.config.fanouts, self.config.batch_size, 
-                                                    scenario=scenario, filter_data=filter_data, num_workers=num_workers)
-                        
-                        from .pipeline import run_pipeline_with_loader
-                        res = run_pipeline_with_loader(self.config, loader, model_params, max_batches=50, start_time=start_time)
+                        runs = getattr(self.config, "runs", 3)
+                        all_eps, all_ttfb, all_mem = [], [], []
+                        last_dwr = 0.0
                         status = "ok"
+                        import numpy as np
+                        for _ in range(runs):
+                            start_time = time.time()
+                            loader = backend.get_sampler(
+                                self.config.fanouts,
+                                self.config.batch_size,
+                                scenario=scenario,
+                                filter_data=filter_data,
+                                num_workers=num_workers,
+                                filter_year=self.config.filter_year,
+                            )
+                            from .pipeline import run_pipeline_with_loader
+                            r = run_pipeline_with_loader(self.config, loader, model_params, max_batches=50, start_time=start_time)
+                            all_eps.append(r["edges_per_sec"])
+                            all_ttfb.append(r["ttfb"])
+                            all_mem.append(r["memory_peak_mb"])
+                            last_dwr = r["data_wait_ratio"]
+                        res = {
+                            "edges_per_sec": float(np.median(all_eps)) if all_eps else 0.0,
+                            "ttfb": float(np.median(all_ttfb)) if all_ttfb else 0.0,
+                            "memory_peak_mb": float(np.median(all_mem)) if all_mem else 0.0,
+                            "data_wait_ratio": last_dwr
+                        }
                             
                     except Exception as e:
                         print(f"Error in {df_name}/{db_name}/{scenario}: {e}")
@@ -258,17 +279,35 @@ def generate_markdown_report(results, output_path, total_nodes):
         best_memory = def_df.loc[def_df["mb_per_1k_nodes"].idxmin()]
 
         report += "\n## 2. Scenario A: Baseline Performance\n\n"
-        report += "\n### Raw Results\n\n"
+        report += "\n### Raw Results (All Systems)\n\n"
         report += tabulate(def_df[["rank", "dataframe", "database", "edges_per_sec", "ttfb", "mb_per_1k_nodes"]], headers="keys", tablefmt="github", showindex=False)
         report += "\n"
+        
+        # DB-Backed Systems
+        db_df = def_df[def_df["database"].isin(DB_BACKENDS)].copy()
+        db_df["rank"] = range(1, len(db_df) + 1)
+        if not db_df.empty:
+            report += "\n### Raw Results (DB-Backed Systems Only)\n\n"
+            report += tabulate(db_df[["rank", "dataframe", "database", "edges_per_sec", "ttfb", "mb_per_1k_nodes"]], headers="keys", tablefmt="github", showindex=False)
+            report += "\n"
+            
+        # In-Memory Baselines
+        mem_df = def_df[def_df["database"].isin(NATIVE_BACKENDS)].copy()
+        mem_df["rank"] = range(1, len(mem_df) + 1)
+        if not mem_df.empty:
+            report += "\n### Raw Results (In-Memory Baselines Only)\n\n"
+            report += tabulate(mem_df[["rank", "dataframe", "database", "edges_per_sec", "ttfb", "mb_per_1k_nodes"]], headers="keys", tablefmt="github", showindex=False)
+            report += "\n"
 
         rules = [
             ("R1 Absolute leader", f"**{best_speed['database']} + {best_speed['dataframe']}** at **{fmt(best_speed['edges_per_sec'], ' edges/sec')}**."),
-            ("R1 DB-backed leader", f"**{best_db['database']} + {best_db['dataframe']}** at **{fmt(best_db['edges_per_sec'], ' edges/sec')}** (Rank **#{best_db['rank']}**).")
+            ("R1 DB-backed leader", f"**{best_db['database']} + {best_db['dataframe']}** at **{fmt(best_db['edges_per_sec'], ' edges/sec')}** (Rank **#{best_db['rank']}** in All, #{db_df.iloc[0]['rank'] if not db_df.empty else 'N/A'} in DB).")
         ]
         if cl_baseline is not None:
-            status = "Target Met" if cl_baseline['rank'] <= 5 else "Improving"
-            rules.append(("R1 Required Stack", f"**CaracalDB + Lynxes** achieved **{fmt(cl_baseline['edges_per_sec'], ' edges/sec')}** (Rank **#{cl_baseline['rank']}**) - **{status}**."))
+            db_cl = db_df[(db_df["database"] == "caracaldb") & (db_df["dataframe"] == "lynxes")]
+            db_rank = db_cl.iloc[0]['rank'] if not db_cl.empty else "N/A"
+            status = "Target Met" if db_rank != "N/A" and db_rank <= 5 else "Improving"
+            rules.append(("R1 Required Stack", f"**CaracalDB + Lynxes** achieved **{fmt(cl_baseline['edges_per_sec'], ' edges/sec')}** (DB Rank **#{db_rank}**) - **{status}**."))
         
         add_rule_list("Rule-Based Diagnosis", rules)
 
@@ -288,12 +327,7 @@ def generate_markdown_report(results, output_path, total_nodes):
         report += "\n"
 
         rules = [("R3 Filtering leader", f"**{best_filt['database']} + {best_filt['dataframe']}** at **{fmt(best_filt['edges_per_sec_filt'], ' edges/sec')}**.")]
-        if cl_filt is not None:
-            status = "Target Met (Rank #1)" if cl_filt['rank'] == 1 else "Highly Competitive"
-            rules.append(("R3 Required Stack", f"**CaracalDB + Lynxes** reached **{fmt(cl_filt['edges_per_sec_filt'], ' edges/sec')}** (Rank **#{cl_filt['rank']}**) - **{status}**."))
-        
         add_rule_list("Rule-Based Diagnosis", rules)
-
     # 4. Scenario C: Warm Start
     warm_df = get_scen("warm_start")
     if not warm_df.empty and not def_df.empty:
@@ -330,10 +364,6 @@ def generate_markdown_report(results, output_path, total_nodes):
         report += "\n"
 
         rules = [("R5 Multi-worker leader", f"**{best_work['database']} + {best_work['dataframe']}** at **{fmt(best_work['edges_per_sec_4w'], ' edges/sec')}**.")]
-        if cl_work is not None:
-            status = "Target Met (Rank #1)" if cl_work['rank'] == 1 else "Scaling Effectively"
-            rules.append(("R5 Required Stack", f"**CaracalDB + Lynxes** reached **{fmt(cl_work['edges_per_sec_4w'], ' edges/sec')}** (Rank **#{cl_work['rank']}**) - **{status}**."))
-        
         add_rule_list("Rule-Based Diagnosis", rules)
 
     # 6. Scorecard
@@ -342,10 +372,10 @@ def generate_markdown_report(results, output_path, total_nodes):
         avg_ttfb=("ttfb", "mean"),
         avg_mem=("mb_per_1k_nodes", "mean")
     ).reset_index()
-    
+
     # Simple overall score
-    score_df["score"] = (score_df["avg_edges"] / score_df["avg_edges"].max() * 60 + 
-                         (score_df["avg_ttfb"].min() / score_df["avg_ttfb"]) * 20 + 
+    score_df["score"] = (score_df["avg_edges"] / score_df["avg_edges"].max() * 60 +
+                         (score_df["avg_ttfb"].min() / score_df["avg_ttfb"]) * 20 +
                          (score_df["avg_mem"].min() / score_df["avg_mem"]) * 20)
     score_df = score_df.sort_values("score", ascending=False)
 
@@ -356,11 +386,10 @@ def generate_markdown_report(results, output_path, total_nodes):
     best_overall = score_df.iloc[0]
     report += f"\n### Final Recommendations\n"
     report += f"* **Top Performer**: {best_overall['database']} + {best_overall['dataframe']} ({fmt(best_overall['score'])}/100)\n"
-    report += f"* **Enterprise Choice**: **CaracalDB + Lynxes** is recommended for production GNNs due to its native push-down filtering and robust multi-worker support (picklable objects).\n"
+    report += f"* **Data-Driven Recommendation**: Based on the aggregated heuristic scorecard, **{best_overall['database']} + {best_overall['dataframe']}** offers the best balance of throughput, latency, and memory efficiency for the evaluated workloads.\n"
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)
-
 def export_results(results, output_path, total_nodes=0):
     df = pd.DataFrame(results)
     df.to_csv(output_path, index=False)

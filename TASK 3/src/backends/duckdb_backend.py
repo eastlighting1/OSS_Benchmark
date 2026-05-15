@@ -2,17 +2,24 @@ import duckdb
 import torch
 import numpy as np
 import pyarrow as pa
-from typing import List
+import os
+import time
+from typing import Any, List
 from .base import BaseBackend
 from ..config import BenchmarkConfig
 
 class DuckDBBackend(BaseBackend):
     def __init__(self, config: BenchmarkConfig):
         self.config = config
-        self.db_path = config.data_dir / "processed" / "benchmark_duckdb.db"
+        self.db_path = (
+            config.data_dir
+            / "processed"
+            / f"benchmark_duckdb_{os.getpid()}_{int(time.time() * 1000)}.db"
+        )
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = duckdb.connect(str(self.db_path))
         self.node_features = None
+        self.node_labels = None
 
     def ingest(self, node_feat_df, node_label_df, node_year_df, edge_df):
         print(f"Ingesting data into DuckDB at {self.db_path}...")
@@ -38,10 +45,28 @@ class DuckDBBackend(BaseBackend):
         
         self.conn.execute("CREATE TABLE edges AS SELECT * FROM edge_table")
         self.node_features = node_feat_df
+        self.node_labels = node_label_df
         
-    def get_sampler(self, fanouts: List[int], batch_size: int, scenario: str = "default", filter_data: Any = None, num_workers: int = 0):
+    def get_sampler(
+        self,
+        fanouts: List[int],
+        batch_size: int,
+        scenario: str = "default",
+        filter_data: Any = None,
+        num_workers: int = 0,
+        filter_year: int | None = None,
+    ):
         from ..samplers.duckdb_sampler import DuckDBSampler
-        return DuckDBSampler(self.conn, self.node_features, fanouts, batch_size, scenario=scenario, filter_data=filter_data)
+        return DuckDBSampler(
+            self.conn,
+            self.node_features,
+            self.node_labels,
+            fanouts,
+            batch_size,
+            scenario=scenario,
+            filter_data=filter_data,
+            filter_year=filter_year if filter_year is not None else self.config.filter_year,
+        )
 
     def fetch_features(self, node_ids: torch.Tensor) -> torch.Tensor:
         indices = node_ids.tolist()
@@ -57,3 +82,8 @@ class DuckDBBackend(BaseBackend):
         
         from ..ingest import convert_to_tensor
         return convert_to_tensor(batch_feat_df)
+
+    def close(self):
+        if self.conn is not None:
+            self.conn.close()
+            self.conn = None

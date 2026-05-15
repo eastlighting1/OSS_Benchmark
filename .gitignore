@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# lib/
+# lib64/
 parts/
 sdist/
 var/
@@ -122,7 +122,7 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
 # pixi.lock
 #   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
-#   in the .venv directory. It is recommended not to include this directory in version control.
+#   in the # .venv directory. It is recommended not to include this directory in version control.
 .pixi/*
 !.pixi/config.toml
 
@@ -152,7 +152,7 @@ activemq-data/
 # Environments
 .env
 .envrc
-.venv
+# .venv
 env/
 venv/
 ENV/
@@ -232,3 +232,4 @@ TASK 2/data/processed/
 TASK 2/profile_caracal.py
 TASK 2/caracaldb_development_requirements.md
 TASK 2/outputs/retrieval_trace.jsonl
+docs

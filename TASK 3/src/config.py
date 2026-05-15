@@ -19,6 +19,7 @@ class BenchmarkConfig:
     scenario: str = "default"
     filter_year: int = 2014
     num_workers: int = 0
+    runs: int = 3
     
     def __post_init__(self):
         self.data_dir = Path(self.data_dir)

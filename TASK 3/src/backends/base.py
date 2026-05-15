@@ -13,7 +13,15 @@ class BaseBackend(ABC):
         pass
 
     @abstractmethod
-    def get_sampler(self, fanouts: List[int], batch_size: int, scenario: str = "default", filter_data: Any = None, num_workers: int = 0):
+    def get_sampler(
+        self,
+        fanouts: List[int],
+        batch_size: int,
+        scenario: str = "default",
+        filter_data: Any = None,
+        num_workers: int = 0,
+        filter_year: int | None = None,
+    ):
         """
         Return a sampler/loader for GNN training with scenario support.
         """
